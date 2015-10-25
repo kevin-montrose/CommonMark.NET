@@ -9,18 +9,21 @@ namespace CommonMark.Syntax
     /// </summary>
     public sealed class Inline
     {
+        public Block Parent { get; set; }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class.
         /// </summary>
-        public Inline()
+        public Inline(Block parent)
         {
+            Parent = parent;
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class.
         /// </summary>
         /// <param name="tag">The type of inline element.</param>
-        public Inline(InlineTag tag)
+        public Inline(Block parent, InlineTag tag) : this(parent)
         {
             this.Tag = tag;
         }
@@ -30,7 +33,7 @@ namespace CommonMark.Syntax
         /// </summary>
         /// <param name="tag">The type of inline element. Should be one of the types that require literal content, for example, <see cref="InlineTag.Code"/>.</param>
         /// <param name="content">The literal contents of the inline element.</param>
-        public Inline(InlineTag tag, string content)
+        public Inline(Block parent, InlineTag tag, string content) : this(parent)
         {
             this.Tag = tag;
             this.LiteralContent = content;
@@ -39,7 +42,7 @@ namespace CommonMark.Syntax
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class.
         /// </summary>
-        internal Inline(InlineTag tag, string content, int startIndex, int length)
+        internal Inline(Block parent, InlineTag tag, string content, int startIndex, int length) : this(parent)
         {
             this.Tag = tag;
             this.LiteralContentValue.Source = content;
@@ -51,7 +54,7 @@ namespace CommonMark.Syntax
         /// Initializes a new instance of the <see cref="Inline"/> class. The element type is set to <see cref="InlineTag.String"/>
         /// </summary>
         /// <param name="content">The literal string contents of the inline element.</param>
-        public Inline(string content)
+        public Inline(Block parent, string content) : this(parent)
         {
             // this is not assigned because it is the default value.
             ////this.Tag = InlineTag.String;
@@ -62,7 +65,7 @@ namespace CommonMark.Syntax
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class. The element type is set to <see cref="InlineTag.String"/>
         /// </summary>
-        internal Inline(string content, int sourcePosition, int sourceLastPosition)
+        internal Inline(Block parent, string content, int sourcePosition, int sourceLastPosition) : this(parent)
         {
             this.LiteralContent = content;
             this.SourcePosition = sourcePosition;
@@ -72,7 +75,7 @@ namespace CommonMark.Syntax
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class. The element type is set to <see cref="InlineTag.String"/>
         /// </summary>
-        internal Inline(string content, int startIndex, int length, int sourcePosition, int sourceLastPosition)
+        internal Inline(Block parent, string content, int startIndex, int length, int sourcePosition, int sourceLastPosition) : this(parent)
         {
             this.LiteralContentValue.Source = content;
             this.LiteralContentValue.StartIndex = startIndex;
@@ -86,15 +89,15 @@ namespace CommonMark.Syntax
         /// </summary>
         /// <param name="tag">The type of inline element. Should be one of the types that contain child elements, for example, <see cref="InlineTag.Emphasis"/>.</param>
         /// <param name="content">The first descendant element of the inline that is being created.</param>
-        public Inline(InlineTag tag, Inline content)
+        public Inline(Block parent, InlineTag tag, Inline content) : this(parent)
         {
             this.Tag = tag;
             this.FirstChild = content;
         }
 
-        internal static Inline CreateLink(Inline label, string url, string title)
+        internal static Inline CreateLink(Block parent, Inline label, string url, string title)
         {
-            return new Inline()
+            return new Inline(parent)
             {
                 Tag = InlineTag.Link,
                 FirstChild = label,
