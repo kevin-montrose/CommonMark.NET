@@ -12,11 +12,9 @@ namespace CommonMark.Tests
     {
         class RemoveVisitor : ASTVisitor
         {
-            public override Block OnBlock(Block block)
+            protected override Block OnBlockQuote(Block block)
             {
-                if (block.Tag == BlockTag.BlockQuote) return null;
-
-                return block;
+                return null;
             }
         }
         

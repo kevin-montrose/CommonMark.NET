@@ -83,6 +83,7 @@
     <Compile Include="Syntax\StringContent.cs" />
     <Compile Include="Syntax\StringContentPart.cs" />
     <Compile Include="Transformers\ASTVisitor.cs" />
+    <Compile Include="Transformers\ASTVisitorBase.cs" />
     <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>
