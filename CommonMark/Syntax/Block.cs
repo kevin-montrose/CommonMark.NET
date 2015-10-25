@@ -53,7 +53,7 @@ namespace CommonMark.Syntax
         /// <summary>
         /// Creates a new top-level document block.
         /// </summary>
-        internal static Block CreateDocument()
+        internal static Block CreateDocument(string completeMarkdown)
         {
 #pragma warning disable 0618
             Block e = new Block(BlockTag.Document, 1, 1, 0);
@@ -62,6 +62,13 @@ namespace CommonMark.Syntax
             e.Top = e;
             return e;
         }
+
+        /// <summary>
+        /// Gets or sets the markdown that was parsed to generate this document.
+        /// 
+        /// This is only set if Tag == BlockTag.Document, and then only if TrackSourcePosition = true.
+        /// </summary>
+        public string OriginalMarkdown { get; set; }
 
         /// <summary>
         /// Gets or sets the type of the element this instance represents.
