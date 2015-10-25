@@ -53,7 +53,7 @@ namespace CommonMark.Syntax
         /// <summary>
         /// Creates a new top-level document block.
         /// </summary>
-        internal static Block CreateDocument()
+        internal static Block CreateDocument(string completeMarkdown)
         {
 #pragma warning disable 0618
             Block e = new Block(BlockTag.Document, 1, 1, 0);
@@ -62,6 +62,46 @@ namespace CommonMark.Syntax
             e.Top = e;
             return e;
         }
+
+        string _OriginalMarkdown;
+        /// <summary>
+        /// Gets or sets the markdown that was parsed to generate this document.
+        /// 
+        /// This is only set if TrackSourcePosition = true.
+        /// </summary>
+        internal string OriginalMarkdown
+        {
+            get
+            {
+                if (Tag == BlockTag.Document) return _OriginalMarkdown;
+
+                return _OriginalMarkdown ?? Top.OriginalMarkdown;
+            }
+            set
+            {
+                _OriginalMarkdown = value;
+            }
+        }
+
+        /// <summary>
+        /// Just the markdown actually defining this block.
+        /// 
+        /// This is only set if OriginalMarkdown is set
+        /// </summary>
+        internal string EquivalentMarkdown
+        {
+            get
+            {
+                if (OriginalMarkdown == null) return null;
+
+                return OriginalMarkdown.Substring(SourcePosition, SourceLength);
+            }
+        }
+
+        /// <summary>
+        /// References definined by inlines in this block.
+        /// </summary>
+        internal List<string> DefinesReferenceLabels { get; set; }
 
         /// <summary>
         /// Gets or sets the type of the element this instance represents.
@@ -117,6 +157,12 @@ namespace CommonMark.Syntax
         {
             get { return this.SourceLastPosition - this.SourcePosition; }
             set { this.SourceLastPosition = this.SourcePosition + value; }
+        }
+
+        internal void AdjustPosition(int delta)
+        {
+            SourcePosition += delta;
+            SourceLastPosition += delta;
         }
 
         /// <summary>

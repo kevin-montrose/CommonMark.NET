@@ -132,7 +132,7 @@ namespace CommonMark.Parser
                     var origPos = subj.Position;
                     while (subj.Position < subj.Buffer.Length 
                         && subj.Buffer[subj.Position] == '[' 
-                        && 0 != InlineMethods.ParseReference(subj))
+                        && 0 != InlineMethods.ParseReference(b, subj))
                     {
                     }
 
@@ -215,6 +215,7 @@ namespace CommonMark.Parser
             Block child = new Block(blockType, line.LineNumber, startColumn + 1, startPosition);
 #pragma warning restore 0618
             child.Parent = parent;
+
             child.Top = parent.Top;
 
             var lastChild = parent.LastChild;
@@ -295,7 +296,7 @@ namespace CommonMark.Parser
                         sc.FillSubject(subj);
                         delta = subj.Position;
 
-                        block.InlineContent = InlineMethods.parse_inlines(subj, refmap, parsers, specialCharacters);
+                        block.InlineContent = InlineMethods.parse_inlines(block, subj, refmap, parsers, specialCharacters);
                         block.StringContent = null;
 
                         if (sc.PositionTracker != null)

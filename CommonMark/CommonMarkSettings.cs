@@ -120,12 +120,12 @@ namespace CommonMark
 
         #region [ Properties that cache structures used in the parsers ]
 
-        private Func<Parser.Subject, Syntax.Inline>[] _inlineParsers;
+        private Func<Syntax.Block, Parser.Subject, Syntax.Inline>[] _inlineParsers;
 
         /// <summary>
         /// Gets the delegates that parse inline elements according to these settings.
         /// </summary>
-        internal Func<Parser.Subject, Syntax.Inline>[] InlineParsers
+        internal Func<Syntax.Block, Parser.Subject, Syntax.Inline>[] InlineParsers
         {
             get
             {

@@ -14,11 +14,11 @@ namespace CommonMark.Parser
         /// Initializes the array of delegates for inline parsing.
         /// </summary>
         /// <returns></returns>
-        internal static Func<Subject, Inline>[] InitializeParsers(CommonMarkSettings settings)
+        internal static Func<Block, Subject, Inline>[] InitializeParsers(CommonMarkSettings settings)
         {
             var strikethroughTilde = 0 != (settings.AdditionalFeatures & CommonMarkAdditionalFeatures.StrikethroughTilde);
 
-            var p = new Func<Subject, Inline>[strikethroughTilde ? 127 : 97];
+            var p = new Func<Block, Subject, Inline>[strikethroughTilde ? 127 : 97];
             p['\n'] = handle_newline;
             p['`'] = handle_backticks;
             p['\\'] = handle_backslash;
@@ -74,13 +74,15 @@ namespace CommonMark.Parser
         /// Adds a new reference to the dictionary, if the label does not already exist there.
         /// Assumes that the length of the label does not exceed <see cref="Reference.MaximumReferenceLabelLength"/>.
         /// </summary>
-        private static void AddReference(Dictionary<string, Reference> refmap, StringPart label, string url, string title)
+        private static void AddReference(Block inBlock, Dictionary<string, Reference> refmap, StringPart label, string url, string title)
         {
             var normalizedLabel = NormalizeReference(label);
             if (refmap.ContainsKey(normalizedLabel))
                 return;
 
             refmap.Add(normalizedLabel, new Reference(normalizedLabel, url, title));
+
+            (inBlock.DefinesReferenceLabels ?? (inBlock.DefinesReferenceLabels = new List<string>())).Add(normalizedLabel);
         }
 
         // Return the next character in the subject, without advancing.
@@ -224,7 +226,7 @@ namespace CommonMark.Parser
 
         // Parse backtick code section or raw backticks, return an inline.
         // Assumes that the subject has a backtick at the current position.
-        static Inline handle_backticks(Subject subj)
+        static Inline handle_backticks(Block parent, Subject subj)
         {
             int ticklength = 0;
             var bl = subj.Length;
@@ -240,11 +242,11 @@ namespace CommonMark.Parser
             {
                 // closing not found
                 subj.Position = startpos; // rewind to right after the opening ticks
-                return new Inline(new string('`', ticklength), startpos - ticklength, startpos);
+                return new Inline(parent, new string('`', ticklength), startpos - ticklength, startpos);
             }
             else
             {
-                return new Inline(InlineTag.Code, NormalizeWhitespace(subj.Buffer, startpos, endpos - startpos - ticklength))
+                return new Inline(parent, InlineTag.Code, NormalizeWhitespace(subj.Buffer, startpos, endpos - startpos - ticklength))
                     {
                         SourcePosition = startpos - ticklength,
                         SourceLastPosition = endpos
@@ -295,7 +297,7 @@ namespace CommonMark.Parser
             return numdelims;
         }
 
-        internal static int MatchInlineStack(InlineStack opener, Subject subj, int closingDelimeterCount, InlineStack closer, InlineTag? singleCharTag, InlineTag? doubleCharTag)
+        internal static int MatchInlineStack(Block parent, InlineStack opener, Subject subj, int closingDelimeterCount, InlineStack closer, InlineTag? singleCharTag, InlineTag? doubleCharTag)
         {
             // calculate the actual number of delimeters used from this closer
             int useDelims;
@@ -323,7 +325,7 @@ namespace CommonMark.Parser
                 inl.FirstChild = inl.NextSibling;
                 inl.NextSibling = null;
 
-                InlineStack.RemoveStackEntry(opener, subj, closer?.Previous);
+                InlineStack.RemoveStackEntry(parent, opener, subj, closer?.Previous);
             }
             else
             {
@@ -332,7 +334,7 @@ namespace CommonMark.Parser
                 inl.LiteralContent = inl.LiteralContent.Substring(0, opener.DelimeterCount);
                 inl.SourceLastPosition -= useDelims;
 
-                inl.NextSibling = new Inline(useDelims == 1 ? singleCharTag.Value : doubleCharTag.Value, inl.NextSibling);
+                inl.NextSibling = new Inline(parent, useDelims == 1 ? singleCharTag.Value : doubleCharTag.Value, inl.NextSibling);
                 inl = inl.NextSibling;
 
                 inl.SourcePosition = opener.StartingInline.SourcePosition + opener.DelimeterCount;
@@ -351,7 +353,7 @@ namespace CommonMark.Parser
                 {
                     // a new inline element must be created because the old one has to be the one that
                     // finalizes the children of the emphasis
-                    var newCloserInline = new Inline(clInl.LiteralContent.Substring(useDelims));
+                    var newCloserInline = new Inline(parent, clInl.LiteralContent.Substring(useDelims));
                     newCloserInline.SourcePosition = inl.SourceLastPosition = clInl.SourcePosition + useDelims;
                     newCloserInline.SourceLength = closer.DelimeterCount;
                     newCloserInline.NextSibling = clInl.NextSibling;
@@ -378,7 +380,7 @@ namespace CommonMark.Parser
             return useDelims;
         }
 
-        private static Inline HandleEmphasis(Subject subj)
+        private static Inline HandleEmphasis(Block parent, Subject subj)
         {
             bool canOpen, canClose;
             var c = subj.Buffer[subj.Position];
@@ -390,7 +392,7 @@ namespace CommonMark.Parser
                 var istack = InlineStack.FindMatchingOpener(subj.LastPendingInline, InlineStack.InlineStackPriority.Emphasis, c, out canClose);
                 if (istack != null)
                 {
-                    var useDelims = MatchInlineStack(istack, subj, numdelims, null, InlineTag.Emphasis, InlineTag.Strong);
+                    var useDelims = MatchInlineStack(parent, istack, subj, numdelims, null, InlineTag.Emphasis, InlineTag.Strong);
 
                     // if the closer was not fully used, move back a char or two and try again.
                     if (useDelims < numdelims)
@@ -399,14 +401,14 @@ namespace CommonMark.Parser
 
                         // use recursion only if it will not be very deep.
                         if (numdelims < 10)
-                            return HandleEmphasis(subj);
+                            return HandleEmphasis(parent, subj);
                     }
 
                     return null;
                 }
             }
 
-            var inlText = new Inline(subj.Buffer, subj.Position - numdelims, numdelims, subj.Position - numdelims, subj.Position);
+            var inlText = new Inline(parent, subj.Buffer, subj.Position - numdelims, numdelims, subj.Position - numdelims, subj.Position);
 
             if (canOpen || canClose)
             {
@@ -424,13 +426,13 @@ namespace CommonMark.Parser
             return inlText;
         }
 
-        private static Inline HandleTilde(Subject subj)
+        private static Inline HandleTilde(Block parent, Subject subj)
         {
             bool canOpen, canClose;
             var numdelims = ScanEmphasisDelimeters(subj, '~', out canOpen, out canClose);
 
             if (numdelims == 1)
-                return new Inline("~", subj.Position - 1, subj.Position);
+                return new Inline(parent, "~", subj.Position - 1, subj.Position);
 
             if (canClose)
             {
@@ -438,7 +440,7 @@ namespace CommonMark.Parser
                 var istack = InlineStack.FindMatchingOpener(subj.LastPendingInline, InlineStack.InlineStackPriority.Emphasis, '~', out canClose);
                 if (istack != null)
                 {
-                    MatchInlineStack(istack, subj, numdelims, null, null, InlineTag.Strikethrough);
+                    MatchInlineStack(parent, istack, subj, numdelims, null, null, InlineTag.Strikethrough);
 
                     // if the closer was not fully used, move back a char or two and try again.
                     if (numdelims > 2)
@@ -447,14 +449,14 @@ namespace CommonMark.Parser
 
                         // use recursion only if it will not be very deep.
                         if (numdelims < 10)
-                            return HandleTilde(subj);
+                            return HandleTilde(parent, subj);
                     }
 
                     return null;
                 }
             }
 
-            var inlText = new Inline(subj.Buffer, subj.Position - numdelims, numdelims,
+            var inlText = new Inline(parent, subj.Buffer, subj.Position - numdelims, numdelims,
                 subj.Position - numdelims, subj.Position);
 
             if (canOpen || canClose)
@@ -473,31 +475,31 @@ namespace CommonMark.Parser
             return inlText;
         }
 
-        private static Inline HandleExclamation(Subject subj)
+        private static Inline HandleExclamation(Block parent, Subject subj)
         {
             subj.Position++;
             if (peek_char(subj) == '[')
-                return HandleLeftSquareBracket(subj, true);
+                return HandleLeftSquareBracket(parent, subj, true);
             else
-                return new Inline("!", subj.Position - 1, subj.Position);
+                return new Inline(parent, "!", subj.Position - 1, subj.Position);
         }
 
-        private static Inline HandleLeftSquareBracket(Subject subj)
+        private static Inline HandleLeftSquareBracket(Block parent, Subject subj)
         {
-            return HandleLeftSquareBracket(subj, false);
+            return HandleLeftSquareBracket(parent, subj, false);
         }
 
-        private static Inline HandleLeftSquareBracket(Subject subj, bool isImage)
+        private static Inline HandleLeftSquareBracket(Block parent, Subject subj, bool isImage)
         {
             Inline inlText;
             
             if (isImage)
             {
-                inlText = new Inline("![", subj.Position - 1, subj.Position + 1);
+                inlText = new Inline(parent, "![", subj.Position - 1, subj.Position + 1);
             }
             else
             {
-                inlText = new Inline("[", subj.Position, subj.Position + 1);
+                inlText = new Inline(parent, "[", subj.Position, subj.Position + 1);
             }
 
             // move past the '['
@@ -515,7 +517,7 @@ namespace CommonMark.Parser
             return inlText;
         }
 
-        internal static void MatchSquareBracketStack(InlineStack opener, Subject subj, Reference details)
+        internal static void MatchSquareBracketStack(Block parent, InlineStack opener, Subject subj, Reference details)
         {
             if (details != null)
             {
@@ -528,6 +530,7 @@ namespace CommonMark.Parser
 
                 inl.TargetUrl = details.Url;
                 inl.LiteralContent = details.Title;
+                inl.TargetUrlAndLiteralContentPopulatedFromReferenceLabel = details.Label;
 
                 if (!isImage)
                 {
@@ -548,7 +551,7 @@ namespace CommonMark.Parser
                     }
                 }
 
-                InlineStack.RemoveStackEntry(opener, subj, null);
+                InlineStack.RemoveStackEntry(parent, opener, subj, null);
 
                 subj.LastInline = inl;
             }
@@ -556,15 +559,15 @@ namespace CommonMark.Parser
             {
                 // this looked like a link, but was not.
                 // remove the opener stack entry but leave the inbetween intact
-                InlineStack.RemoveStackEntry(opener, subj, opener);
+                InlineStack.RemoveStackEntry(parent, opener, subj, opener);
 
-                var inl = new Inline("]", subj.Position - 1, subj.Position);
+                var inl = new Inline(parent, "]", subj.Position - 1, subj.Position);
                 subj.LastInline.LastSibling.NextSibling = inl;
                 subj.LastInline = inl;
             }
         }
 
-        private static Inline HandleRightSquareBracket(Subject subj)
+        private static Inline HandleRightSquareBracket(Block parent, Subject subj)
         {
             // move past ']'
             subj.Position++;
@@ -577,8 +580,8 @@ namespace CommonMark.Parser
                 // if the opener is "inactive" then it means that there was a nested link
                 if (istack.DelimeterCount == -1)
                 {
-                    InlineStack.RemoveStackEntry(istack, subj, istack);
-                    return new Inline("]", subj.Position - 1, subj.Position);
+                    InlineStack.RemoveStackEntry(parent, istack, subj, istack);
+                    return new Inline(parent, "]", subj.Position - 1, subj.Position);
                 }
 
                 var endpos = subj.Position;
@@ -598,11 +601,11 @@ namespace CommonMark.Parser
                 if (details == Reference.InvalidReference)
                     details = null;
 
-                MatchSquareBracketStack(istack, subj, details);
+                MatchSquareBracketStack(parent, istack, subj, details);
                 return null;
             }
 
-            var inlText = new Inline("]", subj.Position - 1, subj.Position);
+            var inlText = new Inline(parent, "]", subj.Position - 1, subj.Position);
 
             if (canClose)
             {
@@ -626,12 +629,12 @@ namespace CommonMark.Parser
         }
 
         // Parse backslash-escape or just a backslash, returning an inline.
-        private static Inline handle_backslash(Subject subj)
+        private static Inline handle_backslash(Block parent, Subject subj)
         {
             subj.Position++;
 
             if (subj.Position >= subj.Length)
-                return new Inline("\\", subj.Position - 1, subj.Position); 
+                return new Inline(parent, "\\", subj.Position - 1, subj.Position); 
 
             var nextChar = subj.Buffer[subj.Position];
 
@@ -640,12 +643,12 @@ namespace CommonMark.Parser
                 // only ascii symbols and newline can be escaped
                 // the exception is the unicode bullet char since it can be used for defining list items
                 subj.Position++;
-                return new Inline(nextChar.ToString(), subj.Position - 2, subj.Position);
+                return new Inline(parent, nextChar.ToString(), subj.Position - 2, subj.Position);
             }
             else if (nextChar == '\n')
             {
                 subj.Position++;
-                return new Inline(InlineTag.LineBreak) 
+                return new Inline(parent, InlineTag.LineBreak) 
                 {
                     SourcePosition = subj.Position - 2,
                     SourceLastPosition = subj.Position
@@ -653,7 +656,7 @@ namespace CommonMark.Parser
             }
             else
             {
-                return new Inline("\\", subj.Position - 1, subj.Position);
+                return new Inline(parent, "\\", subj.Position - 1, subj.Position);
             }
         }
 
@@ -661,10 +664,10 @@ namespace CommonMark.Parser
         /// Parses the entity at the current position. Returns a new string inline.
         /// Assumes that there is a <c>&amp;</c> at the current position.
         /// </summary>
-        private static Inline HandleEntity(Subject subj)
+        private static Inline HandleEntity(Block parent, Subject subj)
         {
             var origPos = subj.Position;
-            return new Inline(ParseEntity(subj), origPos, subj.Position);
+            return new Inline(parent, ParseEntity(subj), origPos, subj.Position);
         }
 
         /// <summary>
@@ -711,7 +714,7 @@ namespace CommonMark.Parser
         /// is processed to decode any HTML entities in it.
         /// This method is guaranteed to return just one Inline, without nested elements.
         /// </summary>
-        private static Inline ParseStringEntities(string s)
+        private static Inline ParseStringEntities(Block parent, string s)
         {
             string result = null;
             StringBuilder builder = null;
@@ -746,11 +749,11 @@ namespace CommonMark.Parser
             }
 
             if (builder == null)
-                return new Inline(result);
+                return new Inline(parent, result);
 
             builder.Append(result);
 
-            return new Inline(builder.ToString());
+            return new Inline(parent, builder.ToString());
         }
 
         /// <summary>
@@ -877,7 +880,7 @@ namespace CommonMark.Parser
 
         // Parse an autolink or HTML tag.
         // Assumes the subject has a '<' character at the current position.
-        static Inline handle_pointy_brace(Subject subj)
+        static Inline handle_pointy_brace(Block parent, Subject subj)
         {
             int matchlen;
             string contents;
@@ -890,8 +893,8 @@ namespace CommonMark.Parser
             if (matchlen > 0)
             {
                 contents = subj.Buffer.Substring(subj.Position, matchlen - 1);
-                var resultContents = ParseStringEntities(contents);
-                var result = Inline.CreateLink(resultContents, contents, string.Empty);
+                var resultContents = ParseStringEntities(parent, contents);
+                var result = Inline.CreateLink(parent, resultContents, contents, string.Empty);
 
                 result.SourcePosition = subj.Position - 1;
                 resultContents.SourcePosition = subj.Position;
@@ -907,8 +910,8 @@ namespace CommonMark.Parser
             if (matchlen > 0)
             {
                 contents = subj.Buffer.Substring(subj.Position, matchlen - 1);
-                var resultContents = ParseStringEntities(contents);
-                var result = Inline.CreateLink(resultContents, "mailto:" + contents, string.Empty);
+                var resultContents = ParseStringEntities(parent, contents);
+                var result = Inline.CreateLink(parent, resultContents, "mailto:" + contents, string.Empty);
                 
                 result.SourcePosition = subj.Position - 1;
                 resultContents.SourcePosition = subj.Position;
@@ -923,7 +926,7 @@ namespace CommonMark.Parser
             matchlen = Scanner.scan_html_tag(subj.Buffer, subj.Position, subj.Length);
             if (matchlen > 0)
             {
-                var result = new Inline(InlineTag.RawHtml, subj.Buffer, subj.Position - 1, matchlen + 1);
+                var result = new Inline(parent, InlineTag.RawHtml, subj.Buffer, subj.Position - 1, matchlen + 1);
                 result.SourcePosition = subj.Position - 1;
                 subj.Position += matchlen;
                 result.SourceLastPosition = subj.Position;
@@ -932,7 +935,7 @@ namespace CommonMark.Parser
             else
             {
                 // if nothing matches, just return the opening <:
-                return new Inline("<", subj.Position - 1, subj.Position);
+                return new Inline(parent, "<", subj.Position - 1, subj.Position);
             }
         }
 
@@ -996,7 +999,7 @@ namespace CommonMark.Parser
 
         // Parse a hard or soft linebreak, returning an inline.
         // Assumes the subject has a newline at the current position.
-        static Inline handle_newline(Subject subj)
+        static Inline handle_newline(Block parent, Subject subj)
         {
             int nlpos = subj.Position;
 
@@ -1009,22 +1012,22 @@ namespace CommonMark.Parser
                 subj.Position++;
 
             if (nlpos > 1 && subj.Buffer[nlpos - 1] == ' ' && subj.Buffer[nlpos - 2] == ' ')
-                return new Inline(InlineTag.LineBreak) { SourcePosition = nlpos - 2, SourceLastPosition = nlpos + 1 };
+                return new Inline(parent, InlineTag.LineBreak) { SourcePosition = nlpos - 2, SourceLastPosition = nlpos + 1 };
             else
-                return new Inline(InlineTag.SoftBreak) { SourcePosition = nlpos, SourceLastPosition = nlpos + 1 };
+                return new Inline(parent, InlineTag.SoftBreak) { SourcePosition = nlpos, SourceLastPosition = nlpos + 1 };
         }
 
         /// <summary>
         /// Parse an inline element from the subject. The subject position is updated to after the element.
         /// </summary>
-        public static Inline ParseInline(Subject subj, Func<Subject, Inline>[] parsers, char[] specialCharacters)
+        public static Inline ParseInline(Block parent, Subject subj, Func<Block, Subject, Inline>[] parsers, char[] specialCharacters)
         {
             var c = subj.Buffer[subj.Position];
 
             var parser = c < parsers.Length ? parsers[c] : null;
 
             if (parser != null)
-                return parser(subj);
+                return parser(parent, subj);
 
             var startpos = subj.Position;
 
@@ -1042,23 +1045,23 @@ namespace CommonMark.Parser
                 while (endpos > startpos && subj.Buffer[endpos - 1] == ' ')
                     endpos--;
 
-            return new Inline(subj.Buffer, startpos, endpos - startpos, startpos, endpos);
+            return new Inline(parent, subj.Buffer, startpos, endpos - startpos, startpos, endpos);
         }
 
-        public static Inline parse_inlines(Subject subj, Dictionary<string, Reference> refmap, Func<Subject, Inline>[] parsers, char[] specialCharacters)
+        public static Inline parse_inlines(Block parent, Subject subj, Dictionary<string, Reference> refmap, Func<Block, Subject, Inline>[] parsers, char[] specialCharacters)
         {
             var len = subj.Length;
 
             if (len == 0)
                 return null;
 
-            var first = ParseInline(subj, parsers, specialCharacters);
+            var first = ParseInline(parent, subj, parsers, specialCharacters);
             subj.LastInline = first.LastSibling;
 
             Inline cur;
             while (subj.Position < len)
             {
-                cur = ParseInline(subj, parsers, specialCharacters);
+                cur = ParseInline(parent, subj, parsers, specialCharacters);
                 if (cur != null)
                 {
                     subj.LastInline.NextSibling = cur;
@@ -1066,7 +1069,7 @@ namespace CommonMark.Parser
                 }
             }
 
-            InlineStack.PostProcessInlineStack(subj, subj.FirstPendingInline, subj.LastPendingInline, InlineStack.InlineStackPriority.Maximum);
+            InlineStack.PostProcessInlineStack(parent, subj, subj.FirstPendingInline, subj.LastPendingInline, InlineStack.InlineStackPriority.Maximum);
 
             return first;
         }
@@ -1162,7 +1165,7 @@ namespace CommonMark.Parser
         // Modify refmap if a reference is encountered.
         // Return 0 if no reference found, otherwise position of subject
         // after reference is parsed.
-        public static int ParseReference(Subject subj)
+        public static int ParseReference(Block inBlock, Subject subj)
         {
             string title;
             var startPos = subj.Position;
@@ -1234,7 +1237,7 @@ namespace CommonMark.Parser
             }
 
             // insert reference into refmap
-            AddReference(subj.ReferenceMap, lab.Value, url, title);
+            AddReference(inBlock, subj.ReferenceMap, lab.Value, url, title);
 
             return subj.Position;
 
