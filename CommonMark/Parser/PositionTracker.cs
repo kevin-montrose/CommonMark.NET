@@ -15,6 +15,8 @@ namespace CommonMark.Parser
 
         private int _blockOffset;
 
+        internal int BlockOffset { get { return _blockOffset; } }
+
         public void AddBlockOffset(int offset)
         {
             this._blockOffset += offset;
@@ -119,6 +121,22 @@ namespace CommonMark.Parser
                 position--;
 
             return position;
+        }
+        
+        internal int GetOffsetAt(int at)
+        {
+            var ret = 0;
+
+            for (var i = 0; i < OffsetCount; i++)
+            {
+                var offset = Offsets[i];
+                if(offset.Position <= at)
+                {
+                    ret += offset.Offset;
+                }
+            }
+
+            return ret;
         }
 
         private PositionOffset[] Offsets = new PositionOffset[10];

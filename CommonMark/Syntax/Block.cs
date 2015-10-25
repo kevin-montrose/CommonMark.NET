@@ -1,6 +1,7 @@
 ﻿using CommonMark.Syntax;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace CommonMark.Syntax
@@ -8,6 +9,7 @@ namespace CommonMark.Syntax
     /// <summary>
     /// Represents a block-level element of the parsed document.
     /// </summary>
+    [DebuggerDisplay("{OriginalMarkdown != null ? EquivalentMarkdown : ToString()}")]
     public sealed class Block
     {
         /// <summary>
@@ -34,7 +36,6 @@ namespace CommonMark.Syntax
         {
             this.Tag = tag;
             this.StartLine = startLine;
-            this.EndLine = startLine;
             this.StartColumn = startColumn;
             this.SourcePosition = sourcePosition;
             this.IsOpen = true;
@@ -53,7 +54,7 @@ namespace CommonMark.Syntax
         /// <summary>
         /// Creates a new top-level document block.
         /// </summary>
-        internal static Block CreateDocument()
+        internal static Block CreateDocument(string completeMarkdown)
         {
 #pragma warning disable 0618
             Block e = new Block(BlockTag.Document, 1, 1, 0);
@@ -62,6 +63,46 @@ namespace CommonMark.Syntax
             e.Top = e;
             return e;
         }
+
+        string _OriginalMarkdown;
+        /// <summary>
+        /// Gets or sets the markdown that was parsed to generate this document.
+        /// 
+        /// This is only set if TrackSourcePosition = true.
+        /// </summary>
+        internal string OriginalMarkdown
+        {
+            get
+            {
+                if (Tag == BlockTag.Document) return _OriginalMarkdown;
+
+                return _OriginalMarkdown ?? Top.OriginalMarkdown;
+            }
+            set
+            {
+                _OriginalMarkdown = value;
+            }
+        }
+
+        /// <summary>
+        /// Just the markdown actually defining this block.
+        /// 
+        /// This is only set if OriginalMarkdown is set
+        /// </summary>
+        internal string EquivalentMarkdown
+        {
+            get
+            {
+                if (OriginalMarkdown == null) return null;
+
+                return OriginalMarkdown.Substring(SourcePosition, SourceLength);
+            }
+        }
+
+        /// <summary>
+        /// References definined by inlines in this block.
+        /// </summary>
+        internal List<string> DefinesReferenceLabels { get; set; }
 
         /// <summary>
         /// Gets or sets the type of the element this instance represents.
@@ -88,14 +129,7 @@ namespace CommonMark.Syntax
         [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
         [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
         public int StartColumn { get; set; }
-
-        /// <summary>
-        /// Gets or sets the number of the last line in the source text that contains this element.
-        /// </summary>
-        [Obsolete("This is deprecated in favor of SourcePosition/SourceLength and will be removed in future. If you have a use case where this property cannot be replaced with the new ones, please log an issue at https://github.com/Knagis/CommonMark.NET", false)]
-        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
-        public int EndLine { get; set; }
+        
 
         /// <summary>
         /// Gets or sets the position of the block element within the source data. This position is before 
@@ -117,6 +151,23 @@ namespace CommonMark.Syntax
         {
             get { return this.SourceLastPosition - this.SourcePosition; }
             set { this.SourceLastPosition = this.SourcePosition + value; }
+        }
+
+        /// <summary>
+        /// Move the whole block, keeping size the same
+        /// </summary>
+        internal void AdjustOffset(int delta)
+        {
+            SourcePosition += delta;
+            SourceLastPosition += delta;
+        }
+
+        /// <summary>
+        /// Adjust the size of the block, keeping the origin point the same
+        /// </summary>
+        internal void AdjustSize(int delta)
+        {
+            SourceLength += delta;
         }
 
         /// <summary>
@@ -176,6 +227,11 @@ namespace CommonMark.Syntax
         public FencedCodeData FencedCodeData { get; set; }
 
         /// <summary>
+        /// Gets or sets the alignment specified as part of a table heading in a GithubStyleTables.
+        /// </summary>
+        public List<TableHeaderAlignment> TableHeaderAlignments { get; set; }
+
+        /// <summary>
         /// Gets or sets the heading level (as in <c>&lt;h1&gt;</c> or <c>&lt;h2&gt;</c>).
         /// </summary>
         public int HeaderLevel { get; set; }
@@ -190,13 +246,10 @@ namespace CommonMark.Syntax
         /// Gets or sets the next sibling of this block element. <c>null</c> if this is the last element.
         /// </summary>
         public Block NextSibling { get; set; }
-
-        /// <summary>
-        /// Gets or sets the previous sibling of this block element. <c>null</c> if this is the first element.
-        /// </summary>
-        [Obsolete("This property will be removed in future. If you have a use case where this property is required, please log an issue at https://github.com/Knagis/CommonMark.NET", false)]
-        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
-        public Block Previous { get; set; }
+        
+        internal Block Clone()
+        {
+            return (Block)this.MemberwiseClone();
+        }
     }
 }

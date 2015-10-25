@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using CommonMark.Syntax;
 
 namespace CommonMark
 {
@@ -66,6 +67,7 @@ namespace CommonMark
                 return _version;
             }
         }
+
 #endif
 
         /// <summary>
@@ -107,51 +109,71 @@ namespace CommonMark
             if (settings == null)
                 settings = CommonMarkSettings.Default;
 
-            var cur = Syntax.Block.CreateDocument();
-            var doc = cur;
-            var line = new LineInfo(settings.TrackSourcePosition);
-
+            string totalMarkdown = null;
+            IDisposable disposeAtEnd = null;
             try
             {
-                var reader = new TabTextReader(source);
-                reader.ReadLine(line);
-                while (line.Line != null)
+                if (settings.TrackSourcePosition)
                 {
-                    BlockMethods.IncorporateLine(line, ref cur);
+                    totalMarkdown = source.ReadToEnd();
+                    disposeAtEnd = source = new StringReader(totalMarkdown);
+                }
+
+                var cur = Syntax.Block.CreateDocument(totalMarkdown);
+                var doc = cur;
+                doc.OriginalMarkdown = totalMarkdown;
+                var line = new LineInfo(settings.TrackSourcePosition);
+
+                try
+                {
+                    var reader = new TabTextReader(source);
                     reader.ReadLine(line);
+                    while (line.Line != null)
+                    {
+                        BlockMethods.IncorporateLine(line, ref cur, settings);
+                        reader.ReadLine(line);
+                    }
+                }
+                catch (IOException)
+                {
+                    throw;
+                }
+                catch (CommonMarkException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    throw new CommonMarkException("An error occurred while parsing line " + line.ToString(), cur, ex);
+                }
+
+                try
+                {
+                    do
+                    {
+                        BlockMethods.Finalize(cur, line, settings);
+                        cur = cur.Parent;
+                    } while (cur != null);
+                }
+                catch (CommonMarkException)
+                {
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    throw new CommonMarkException("An error occurred while finalizing open containers.", cur, ex);
+                }
+
+                return doc;
+            }
+            finally
+            {
+                if (disposeAtEnd != null)
+                {
+                    disposeAtEnd.Dispose();
+                    disposeAtEnd = null;
                 }
             }
-            catch(IOException)
-            {
-                throw;
-            }
-            catch(CommonMarkException)
-            {
-                throw;
-            }
-            catch(Exception ex)
-            {
-                throw new CommonMarkException("An error occurred while parsing line " + line.ToString(), cur, ex);
-            }
-
-            try
-            {
-                do
-                {
-                    BlockMethods.Finalize(cur, line);
-                    cur = cur.Parent;
-                } while (cur != null);
-            }
-            catch (CommonMarkException)
-            {
-                throw;
-            }
-            catch (Exception ex)
-            {
-                throw new CommonMarkException("An error occurred while finalizing open containers.", cur, ex);
-            }
-
-            return doc;
         }
 
         /// <summary>
