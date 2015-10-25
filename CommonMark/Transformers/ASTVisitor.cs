@@ -16,6 +16,71 @@ namespace CommonMark.Transformers
             return inline;
         }
 
+        static void Remove(Block block)
+        {
+            var parent = block.Parent;
+
+            // we just removed the root, there's nothing to do
+            if (parent == null) return;
+
+            Block prevSibling = null;
+            var curSibling = parent.FirstChild;
+            while (curSibling != block)
+            {
+                prevSibling = curSibling;
+                curSibling = curSibling.NextSibling;
+            }
+
+            // remove this once Previous is removed
+            if(block.NextSibling != null)
+            {
+                block.NextSibling.Previous = block.Previous;
+            }
+
+            // we removed the first element
+            if(prevSibling == null)
+            {
+                parent.FirstChild = block.NextSibling;
+            }
+            else
+            {
+                // skip right over this
+                prevSibling.NextSibling = block.NextSibling;
+            }
+
+            block.Parent = block.NextSibling = null;
+
+            // remove once Previous is removed
+            block.Previous = null;
+        }
+
+        static void Remove(Inline inline)
+        {
+            var parent = inline.Parent;
+            
+            Inline prevSibling = null;
+            var curSibling = parent.InlineContent;
+            while (curSibling != inline)
+            {
+                prevSibling = curSibling;
+                curSibling = curSibling.NextSibling;
+            }
+            
+            // we removed the first element
+            if (prevSibling == null)
+            {
+                parent.InlineContent = inline.NextSibling;
+            }
+            else
+            {
+                // skip right over this
+                prevSibling.NextSibling = inline.NextSibling;
+            }
+
+            inline.Parent = null;
+            inline.NextSibling = null;
+        }
+
         static void Replace(Block old, Block with)
         {
             var parent = old.Parent;
@@ -74,72 +139,77 @@ namespace CommonMark.Transformers
             with.NextSibling = old.NextSibling;
         }
 
-        public Block Visit(Block root)
+        public void Visit(Block root)
         {
             var toVisitBlocks = new Stack<Block>();
             toVisitBlocks.Push(root);
-
-            var ret = root;
-
-            while(toVisitBlocks.Count > 0)
+            
+            while (toVisitBlocks.Count > 0)
             {
                 var visiting = toVisitBlocks.Pop();
-                var newVisiting = visiting = OnBlock(visiting);
+                var newVisiting = OnBlock(visiting);
 
-                if(visiting == root)
+                if (newVisiting == null)
                 {
-                    ret = newVisiting;
+                    Remove(visiting);
                 }
-
-                if(!object.ReferenceEquals(visiting, newVisiting))
+                else
                 {
-                    Replace(visiting, newVisiting);
-                }
-                
-                if(newVisiting.NextSibling != null)
-                {
-                    toVisitBlocks.Push(newVisiting.NextSibling);
-                }
-
-                var childBlock = newVisiting.FirstChild;
-                while (childBlock != null)
-                {
-                    toVisitBlocks.Push(childBlock);
-                    childBlock = childBlock.NextSibling;
-                }
-
-                var toVisitInlines = new Stack<Inline>();
-                
-                if(newVisiting.InlineContent != null)
-                {
-                    toVisitInlines.Push(newVisiting.InlineContent);
-                }
-
-                while (toVisitInlines.Count > 0)
-                {
-                    var currentInline = toVisitInlines.Pop();
-                    var newInline = OnInline(currentInline);
-
-                    if (!object.ReferenceEquals(currentInline, newInline))
+                    if (!object.ReferenceEquals(visiting, newVisiting))
                     {
-                        Replace(currentInline, newInline);
+                        Replace(visiting, newVisiting);
                     }
 
-                    if(newInline.NextSibling != null)
+                    if (newVisiting.NextSibling != null)
                     {
-                        toVisitInlines.Push(newInline.NextSibling);
+                        toVisitBlocks.Push(newVisiting.NextSibling);
                     }
 
-                    var childInline = newInline.FirstChild;
-                    while(childInline != null)
+                    var childBlock = newVisiting.FirstChild;
+                    while (childBlock != null)
                     {
-                        toVisitInlines.Push(childInline);
-                        childInline = childInline.NextSibling;
+                        toVisitBlocks.Push(childBlock);
+                        childBlock = childBlock.NextSibling;
+                    }
+
+                    var toVisitInlines = new Stack<Inline>();
+
+                    if (newVisiting.InlineContent != null)
+                    {
+                        toVisitInlines.Push(newVisiting.InlineContent);
+                    }
+
+                    while (toVisitInlines.Count > 0)
+                    {
+                        var currentInline = toVisitInlines.Pop();
+                        var newInline = OnInline(currentInline);
+
+                        if (newInline == null)
+                        {
+                            Remove(currentInline);
+                        }
+                        else
+                        {
+                            if (!object.ReferenceEquals(currentInline, newInline))
+                            {
+                                Replace(currentInline, newInline);
+                            }
+
+                            if (newInline.NextSibling != null)
+                            {
+                                toVisitInlines.Push(newInline.NextSibling);
+                            }
+
+                            var childInline = newInline.FirstChild;
+                            while (childInline != null)
+                            {
+                                toVisitInlines.Push(childInline);
+                                childInline = childInline.NextSibling;
+                            }
+                        }
                     }
                 }
             }
-
-            return ret;
         }
     }
 }
