@@ -59,7 +59,7 @@ namespace CommonMark.Tests
                 var endIx = markdown.Length - 1;
                 while (char.IsWhiteSpace(markdown[endIx])) endIx--;
 
-                var newMarkdown = markdown.Substring(0, startIx + 2) + "http://example.com/" + markdown.Substring(endIx);
+                var newMarkdown = markdown.Substring(0, startIx + 2) + "http://example.com/" + markdown.Substring(endIx + 1);
 
                 return CreateBlock(newMarkdown, Settings);
             }

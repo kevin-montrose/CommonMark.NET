@@ -12,21 +12,12 @@ namespace CommonMark.Transformers
 
             var doc = CommonMarkConverter.Parse(markdown, settings);
 
-            var inlines = new List<Inline>();
-            foreach(var entry in doc.AsEnumerable())
-            {
-                if(entry.Inline != null)
-                {
-                    inlines.Add(entry.Inline);
-                }
-            }
+            if(doc.FirstChild == null) throw new InvalidOperationException("Couldn't create a singular inline from [" + markdown + "]");
 
-            if(inlines.Count != 1)
-            {
-                throw new InvalidOperationException("Couldn't create a singular inline from [" + markdown + "]");
-            }
+            var inline = doc.FirstChild.InlineContent;
+            if(inline == null) throw new InvalidOperationException("Couldn't create a singular inline from [" + markdown + "]");
 
-            return inlines[0];
+            return inline;
         }
 
         protected Block CreateBlock(string markdown, CommonMarkSettings settings)
