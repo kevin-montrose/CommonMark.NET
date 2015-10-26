@@ -66,7 +66,7 @@ namespace CommonMark.Syntax
         /// <summary>
         /// Gets or sets the markdown that was parsed to generate this document.
         /// 
-        /// This is only set if Tag == BlockTag.Document, and then only if TrackSourcePosition = true.
+        /// This is only set if TrackSourcePosition = true.
         /// </summary>
         public string OriginalMarkdown { get; set; }
 

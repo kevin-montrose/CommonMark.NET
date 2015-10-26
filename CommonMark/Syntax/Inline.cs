@@ -11,6 +11,24 @@ namespace CommonMark.Syntax
     {
         public Block Parent { get; set; }
 
+        string _OriginalMarkdown;
+        /// <summary>
+        /// Gets or sets the markdown that was parsed to generate this document.
+        /// 
+        /// This is only set if TrackSourcePosition = true.
+        /// </summary>
+        public string OriginalMarkdown
+        {
+            get
+            {
+                return _OriginalMarkdown ?? (_OriginalMarkdown = Parent.OriginalMarkdown);
+            }
+            set
+            {
+                _OriginalMarkdown = value;
+            }
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class.
         /// </summary>

@@ -215,6 +215,8 @@ namespace CommonMark.Parser
             Block child = new Block(blockType, line.LineNumber, startColumn + 1, startPosition);
 #pragma warning restore 0618
             child.Parent = parent;
+            child.OriginalMarkdown = parent.OriginalMarkdown;
+
             child.Top = parent.Top;
 
             var lastChild = parent.LastChild;

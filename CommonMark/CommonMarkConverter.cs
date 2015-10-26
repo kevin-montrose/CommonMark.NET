@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using CommonMark.Syntax;
 
 namespace CommonMark
 {
@@ -66,6 +67,7 @@ namespace CommonMark
                 return _version;
             }
         }
+
 #endif
 
         /// <summary>
@@ -341,6 +343,29 @@ namespace CommonMark
 
                 return writer.ToString();
             }
+        }
+
+
+        internal static string ToMarkdown(Block ast)
+        {
+            var ret = new StringBuilder();
+            
+            foreach(var entry in ast.AsEnumerable())
+            {
+                if(entry.Block != null)
+                {
+                    continue;
+                }
+                else
+                {
+                    var markdown = entry.Inline.OriginalMarkdown;
+                    var part = markdown.Substring(entry.Inline.SourcePosition, entry.Inline.SourceLength);
+
+                    ret.Append(part);
+                }
+            }
+
+            return ret.ToString();
         }
     }
 }
