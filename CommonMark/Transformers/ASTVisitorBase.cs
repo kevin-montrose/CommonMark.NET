@@ -477,11 +477,22 @@ namespace CommonMark.Transformers
             // update markdown
             var startRemoval = old.SourcePosition;
             var stopRemoval = old.SourcePosition + old.SourceLength;
-            ReplaceMarkdown(root, startRemoval, stopRemoval, withMarkdown);
 
             with.Top = root;
             with.SourcePosition = startRemoval;
-            with.SourceLength = withMarkdown.Length;
+            with.SourceLastPosition = startRemoval + withMarkdown.Length;
+
+            ReplaceMarkdown(root, startRemoval, stopRemoval, withMarkdown);
+
+            with.SourcePosition = startRemoval;
+            with.SourceLastPosition = startRemoval + withMarkdown.Length;
+
+#if DEBUG
+            if(with.EquivalentMarkdown != withMarkdown)
+            {
+                throw new Exception("uhhhh, replacement failed");
+            }
+#endif
         }
 
         static void Replace(Block root, Inline old, Inline with)
@@ -511,10 +522,14 @@ namespace CommonMark.Transformers
 
             var startRemoval = old.SourcePosition;
             var stopRemoval = old.SourcePosition + old.SourceLength;
+
+            with.SourcePosition = startRemoval;
+            with.SourceLastPosition = startRemoval + withMarkdown.Length;
+
             ReplaceMarkdown(root, startRemoval, stopRemoval, withMarkdown);
 
             with.SourcePosition = startRemoval;
-            with.SourceLength = withMarkdown.Length;
+            with.SourceLastPosition = startRemoval + withMarkdown.Length;
 
 #if DEBUG
             if(with.EquivalentMarkdown != withMarkdown)
