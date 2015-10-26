@@ -149,6 +149,12 @@ namespace CommonMark.Syntax
             set { this.SourceLastPosition = this.SourcePosition + value; }
         }
 
+        internal void AdjustPosition(int delta)
+        {
+            SourcePosition += delta;
+            SourceLastPosition += delta;
+        }
+
         /// <summary>
         /// Gets or sets a value indicating whether this block element has been completed (and thus new lines cannot be added
         /// to it) or is still open. By default all elements are created as open and are closed when the parser detects it.

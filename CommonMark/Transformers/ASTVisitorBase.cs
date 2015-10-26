@@ -272,11 +272,11 @@ namespace CommonMark.Transformers
                         sibling,
                         b =>
                         {
-                            b.SourcePosition += adjustmentSize;
+                            b.AdjustPosition(adjustmentSize);
                         },
                         i =>
                         {
-                            i.SourcePosition += adjustmentSize;
+                            i.AdjustSize(adjustmentSize);
                         }
                     );
 
@@ -296,7 +296,7 @@ namespace CommonMark.Transformers
                             sibling,
                             i =>
                             {
-                                i.SourcePosition += adjustmentSize;
+                                i.AdjustSize(adjustmentSize);
                             }
                         );
 
@@ -318,7 +318,7 @@ namespace CommonMark.Transformers
                                 sibling,
                                 i =>
                                 {
-                                    i.SourcePosition += adjustmentSize;
+                                    i.AdjustSize(adjustmentSize);
                                 }
                             );
 
@@ -328,7 +328,7 @@ namespace CommonMark.Transformers
                 }
             }
 
-            // adjust the size narrowest inline/block and of it's parents
+            // adjust the **size** narrowest inline/block and of it's parents
             {
                 var toAdjustBlocks = new Stack<Block>();
 

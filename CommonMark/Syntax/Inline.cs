@@ -194,6 +194,12 @@ namespace CommonMark.Syntax
             set { this.SourceLastPosition = this.SourcePosition + value; }
         }
 
+        internal void AdjustSize(int delta)
+        {
+            SourcePosition += delta;
+            SourceLastPosition += delta;
+        }
+
         /// <summary>
         /// Gets the link details. This is now obsolete in favor of <see cref="TargetUrl"/> and <see cref="LiteralContent"/>
         /// properties and this property will be removed in future.
