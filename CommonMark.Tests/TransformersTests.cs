@@ -104,7 +104,7 @@ bar
         [TestMethod]
         public void RoundtripMarkdown()
         {
-            {
+            /*{
                 var markdown = @"
 foo
 
@@ -182,7 +182,7 @@ bar
 ",
                     withReplacement
                 );
-            }
+            }*/
 
             {
                 var markdown = @"

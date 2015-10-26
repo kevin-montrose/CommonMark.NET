@@ -36,14 +36,14 @@ namespace CommonMark.Transformers
 #endif
         }
 
-        static void ReplaceMarkdown(Block root, int removeStart,int removeEnd, string replaceWithMarkdown)
+        static void FindNarrowestBlockAndInline(Block root, int removeStart, int removeEnd, out Block narrowestBlock, out Inline narrowestInline, out IEnumerable<Inline> narrowestInlineParentInlines)
         {
-            var adjustmentSize = replaceWithMarkdown.Length - (removeEnd - removeStart);
+            narrowestBlock = root;
 
             var pendingBlocks = new Stack<Block>();
-            pendingBlocks.Push(root);
+            pendingBlocks.Push(narrowestBlock);
 
-            while(pendingBlocks.Count > 0)
+            while (pendingBlocks.Count > 0)
             {
                 var curBlock = pendingBlocks.Pop();
 
@@ -52,85 +52,312 @@ namespace CommonMark.Transformers
                 {
                     pendingBlocks.Push(curBlock.NextSibling);
                 }
-                
+
                 var curBlockStart = curBlock.SourcePosition;
                 var curBlockEnd = curBlock.SourcePosition + curBlock.SourceLength;
-                
+
                 bool isBeforeReplacementBlock, isAfterReplacementBlock, isOverlappingReplacementBlock, replaceIsInsideBlock;
                 ReplacementRelative(curBlockStart, curBlockEnd, removeStart, removeEnd, out isBeforeReplacementBlock, out isAfterReplacementBlock, out isOverlappingReplacementBlock, out replaceIsInsideBlock);
-                
-                if (isBeforeReplacementBlock)
+
+                if (isBeforeReplacementBlock || isAfterReplacementBlock)
                 {
-                    // nothing to do, even with inlines and children
+                    continue;
                 }
 
-                if (isAfterReplacementBlock)
-                {
-                    curBlock.SourcePosition += adjustmentSize;
-                }
-
-                if (replaceIsInsideBlock)
-                {
-                    curBlock.SourceLength += adjustmentSize;
-                }
-
-                if (isOverlappingReplacementBlock)
+                if (isOverlappingReplacementBlock || !replaceIsInsideBlock)
                 {
                     throw new Exception("This shouldn't be possible?!");
                 }
 
-                // push children
-                if(curBlock.FirstChild != null)
+                if (curBlock.SourceLength < narrowestBlock.SourceLength)
+                {
+                    narrowestBlock = curBlock;
+
+                }
+
+                if (curBlock.FirstChild != null)
                 {
                     pendingBlocks.Push(curBlock.FirstChild);
                 }
+            }
 
-                // time to handle inlines
-                var pendingInlines = new Stack<Inline>();
-                if (curBlock.InlineContent != null)
+            narrowestInline = narrowestBlock.InlineContent;
+
+            var pendingInlines = new Stack<Inline>();
+            if (narrowestInline != null)
+            {
+                pendingInlines.Push(narrowestInline);
+            }
+
+            while (pendingInlines.Count > 0)
+            {
+                var curInline = pendingInlines.Pop();
+
+                // we always needs to look at the sibling blocks, no matter what, so go ahead and queue it
+                if (curInline.NextSibling != null)
                 {
-                    pendingInlines.Push(curBlock.InlineContent);
+                    pendingInlines.Push(curInline.NextSibling);
                 }
 
-                while(pendingInlines.Count > 0)
+                var curInlineStart = curInline.SourcePosition;
+                var curInlineEnd = curInline.SourcePosition + curInline.SourceLength;
+
+                bool isBeforeReplacement, isAfterReplacement, isOverlappingReplacement, replaceIsInside;
+                ReplacementRelative(curInlineStart, curInlineEnd, removeStart, removeEnd, out isBeforeReplacement, out isAfterReplacement, out isOverlappingReplacement, out replaceIsInside);
+
+                if (isBeforeReplacement || isAfterReplacement)
                 {
-                    var curInline = pendingInlines.Pop();
-                    // we always needs to look at the sibling inlines, no matter what, so go ahead and queue it
-                    if (curInline.NextSibling != null)
+                    continue;
+                }
+
+                if (isOverlappingReplacement || !replaceIsInside)
+                {
+                    throw new Exception("This shouldn't be possible?!");
+                }
+
+                if (curInline.SourceLength < narrowestBlock.SourceLength)
+                {
+                    narrowestInline = curInline;
+
+                    if (narrowestInline.FirstChild != null)
                     {
-                        pendingInlines.Push(curInline.NextSibling);
+                        pendingInlines.Push(narrowestInline.FirstChild);
+                    }
+                }
+            }
+
+            narrowestInlineParentInlines = null;
+            if (narrowestInline != null)
+            {
+                narrowestInlineParentInlines = FindParentInlines(narrowestBlock, narrowestInline);
+            }
+        }
+
+        static IEnumerable<Inline> FindParentInlines(Block parentBlock, Inline ofInline)
+        {
+            var stack = new Stack<Inline>();
+            var child = parentBlock.InlineContent;
+            while (child != null)
+            {
+                var ret = Trace(child, ofInline, stack);
+                if (ret != null) return ret;
+
+                child = child.NextSibling;
+            }
+
+            return stack;
+        }
+
+        static IEnumerable<Inline> Trace(Inline from, Inline to, Stack<Inline> path)
+        {
+            path.Push(from);
+
+            var child = from.FirstChild;
+
+            while (child != null)
+            {
+                if (child == to)
+                {
+                    return path;
+                }
+
+                var ret = Trace(child, to, path);
+                if (ret != null) return ret;
+
+                child = child.NextSibling;
+            }
+
+            path.Pop();
+            return null;
+        }
+
+        static void VisitSelfAndChildren(Inline forInline, Action<Inline> onInline)
+        {
+            onInline(forInline);
+
+            var pending = new Stack<Inline>();
+            if (forInline.FirstChild != null)
+            {
+                pending.Push(forInline.FirstChild);
+            }
+
+            while(pending.Count > 0)
+            {
+                var cur = pending.Pop();
+                onInline(cur);
+                if(cur.NextSibling != null)
+                {
+                    pending.Push(cur.NextSibling);
+                }
+                if(cur.FirstChild != null)
+                {
+                    pending.Push(cur.FirstChild);
+                }
+            }
+        }
+
+        static void VisitSelfAndChildren(Block forBlock, Action<Block> onBlock, Action<Inline> onInline)
+        {
+            Action<Block> visitInlinesOfBlock =
+                block =>
+                {
+                    var pendingInlines = new Stack<Inline>();
+                    if (block.InlineContent != null)
+                    {
+                        pendingInlines.Push(block.InlineContent);
                     }
 
-                    var curInlineStart = curInline.SourcePosition;
-                    var curInlineEnd = curInline.SourcePosition + curInline.SourceLength;
-
-                    bool isBeforeReplacementInline, isAfterReplacementInline, isOverlappingReplacementInline, replaceIsInsideInline;
-                    ReplacementRelative(curBlockStart, curBlockEnd, removeStart, removeEnd, out isBeforeReplacementInline, out isAfterReplacementInline, out isOverlappingReplacementInline, out replaceIsInsideInline);
-
-                    if (isBeforeReplacementInline)
+                    while (pendingInlines.Count > 0)
                     {
-                        // nothing to do, even with children
+                        var curInline = pendingInlines.Pop();
+                        onInline(curInline);
+
+                        if (curInline.NextSibling != null)
+                        {
+                            pendingInlines.Push(curInline.NextSibling);
+                        }
+
+                        if (curInline.FirstChild != null)
+                        {
+                            pendingInlines.Push(curInline.FirstChild);
+                        }
+                    }
+                };
+
+            onBlock(forBlock);
+
+            var pendingChildBlocks = new Stack<Block>();
+            if(forBlock.FirstChild != null)
+            {
+                pendingChildBlocks.Push(forBlock.FirstChild);
+            }
+
+            while (pendingChildBlocks.Count > 0)
+            {
+                var curChild = pendingChildBlocks.Pop();
+                onBlock(curChild);
+                
+                if(curChild.NextSibling != null)
+                {
+                    pendingChildBlocks.Push(curChild.NextSibling);
+                }
+
+                if(curChild.FirstChild != null)
+                {
+                    pendingChildBlocks.Push(curChild.FirstChild);
+                }
+
+                visitInlinesOfBlock(curChild);
+            }
+
+            visitInlinesOfBlock(forBlock);
+        }
+
+        static void ReplaceMarkdown(Block root, int removeStart, int removeEnd, string replaceWithMarkdown)
+        {
+            var adjustmentSize = replaceWithMarkdown.Length - (removeEnd - removeStart);
+
+            Block narrowestBlock;
+            Inline narrowestInline;
+            IEnumerable<Inline> narrowestInlineParentInlines;
+            FindNarrowestBlockAndInline(root, removeStart, removeEnd, out narrowestBlock, out narrowestInline, out narrowestInlineParentInlines);
+
+            // adjust offset of sibling blocks
+            //   all of their children must also be offset
+            {
+                var sibling = narrowestBlock.NextSibling;
+                while(sibling != null)
+                {
+                    VisitSelfAndChildren(
+                        sibling,
+                        b =>
+                        {
+                            b.SourcePosition += adjustmentSize;
+                        },
+                        i =>
+                        {
+                            i.SourcePosition += adjustmentSize;
+                        }
+                    );
+
+                    sibling = sibling.NextSibling;
+                }
+            }
+
+            // adjust offset of sibling inlines
+            //   all of their children must also be offset
+            {
+                if(narrowestInline != null)
+                {
+                    var sibling = narrowestInline.NextSibling;
+                    while(sibling != null)
+                    {
+                        VisitSelfAndChildren(
+                            sibling,
+                            i =>
+                            {
+                                i.SourcePosition += adjustmentSize;
+                            }
+                        );
+
+                        sibling = sibling.NextSibling;
+                    }
+                }
+            }
+
+            // adjust the offsets of the *siblings* of the inline parents of the narrowest inline, and their children
+            {
+                if(narrowestInlineParentInlines != null)
+                {
+                    foreach(var parentInline in narrowestInlineParentInlines)
+                    {
+                        var sibling = parentInline.NextSibling;
+                        while (sibling != null)
+                        {
+                            VisitSelfAndChildren(
+                                sibling,
+                                i =>
+                                {
+                                    i.SourcePosition += adjustmentSize;
+                                }
+                            );
+
+                            sibling = sibling.NextSibling;
+                        }
+                    }
+                }
+            }
+
+            // adjust the size narrowest inline/block and of it's parents
+            {
+                var toAdjustBlocks = new Stack<Block>();
+
+                if (narrowestInline != null)
+                {
+                    toAdjustBlocks.Push(narrowestInline.Parent);
+                    narrowestInline.SourceLength += adjustmentSize;
+
+                    // we also need to increase the size of any parent *inlines* of the narrowest inline
+                    foreach(var parent in narrowestInlineParentInlines)
+                    {
+                        parent.SourceLength += adjustmentSize;
+                    }
+                }
+                else
+                {
+                    toAdjustBlocks.Push(narrowestBlock);
+                }
+
+                while (toAdjustBlocks.Count > 0)
+                {
+                    var toAdjustBlock = toAdjustBlocks.Pop();
+
+                    if (toAdjustBlock.Parent != null)
+                    {
+                        toAdjustBlocks.Push(toAdjustBlock.Parent);
                     }
 
-                    if (isAfterReplacementInline)
-                    {
-                        curInline.SourcePosition += adjustmentSize;
-                    }
-
-                    if (replaceIsInsideInline)
-                    {
-                        curInline.SourceLength += adjustmentSize;
-                    }
-
-                    if (isOverlappingReplacementInline)
-                    {
-                        throw new Exception("This shouldn't be possible?!");
-                    }
-
-                    if(curInline.FirstChild != null)
-                    {
-                        pendingInlines.Push(curInline.FirstChild);
-                    }
+                    toAdjustBlock.SourceLength += adjustmentSize;
                 }
             }
             
