@@ -10,13 +10,30 @@ namespace CommonMark.Tests
     [TestClass]
     public class TransformersTests
     {
-        class RemoveVisitor : ASTVisitor
+        static CommonMarkSettings Settings;
+
+        static TransformersTests()
+        {
+            Settings = CommonMarkSettings.Default.Clone();
+            Settings.TrackSourcePosition = true;
+        }
+
+        class RemoveBlockQuotesVisitor : ASTVisitor
         {
             protected override Block OnBlockQuote(Block block)
             {
                 return null;
             }
         }
+
+        class ReplaceStrongVisitor : ASTVisitor
+        {
+            protected override Inline OnStrong(Inline inline)
+            {
+                return CreateInline("hello world", Settings);
+            }
+        }
+
         
         [TestMethod]
         public void Remove()
@@ -33,10 +50,7 @@ is it?
 
 bar
 ";
-            var settings = CommonMarkSettings.Default.Clone();
-            settings.TrackSourcePosition = true;
-
-            var ast = CommonMarkConverter.Parse(markdown, settings);
+            var ast = CommonMarkConverter.Parse(markdown, Settings);
             string originalHtml;
             using (var str = new StringWriter())
             {
@@ -44,7 +58,7 @@ bar
                 originalHtml = str.ToString();
             }
 
-            (new RemoveVisitor()).Visit(ast);
+            (new RemoveBlockQuotesVisitor()).Visit(ast);
 
             string modifiedHtml;
             using (var str = new StringWriter())
@@ -60,7 +74,8 @@ bar
         [TestMethod]
         public void RoundtripMarkdown()
         {
-            var markdown = @"
+            {
+                var markdown = @"
 foo
 
 >**something**
@@ -72,24 +87,72 @@ is it?
 
 bar
 ";
+                
+                var ast = CommonMarkConverter.Parse(markdown, Settings);
+                var roundtripMarkdown = ast.OriginalMarkdown;
+                Assert.AreEqual(markdown, roundtripMarkdown);
+            }
 
-            var settings = CommonMarkSettings.Default.Clone();
-            settings.TrackSourcePosition = true;
-            var ast = CommonMarkConverter.Parse(markdown, settings);
-            var roundtripMarkdown = ast.OriginalMarkdown;
-            Assert.AreEqual(markdown, roundtripMarkdown);
+                {
+                var markdown = @"
+foo
 
-            (new RemoveVisitor()).Visit(ast);
+>**something**
+>
+> ---
+>
+> *else*
+is it?
 
-            var withoutBlockQuoteMarkdown = ast.OriginalMarkdown;
-            Assert.AreEqual(@"
+bar
+";
+                
+                var ast = CommonMarkConverter.Parse(markdown, Settings);
+                (new RemoveBlockQuotesVisitor()).Visit(ast);
+
+                var withoutBlockQuoteMarkdown = ast.OriginalMarkdown;
+                Assert.AreEqual(@"
 foo
 
 
 bar
 ",
-                withoutBlockQuoteMarkdown
-            );
+                    withoutBlockQuoteMarkdown
+                );
+            }
+
+            {
+                var markdown = @"
+foo
+
+>**something**
+>
+> ---
+>
+> *else*
+is it?
+
+bar
+";
+                var ast = CommonMarkConverter.Parse(markdown, Settings);
+                (new ReplaceStrongVisitor()).Visit(ast);
+
+                var withReplacement = ast.OriginalMarkdown;
+                Assert.AreEqual(@"
+foo
+
+>hello world
+>
+> ---
+>
+> *else*
+is it?
+
+bar
+",
+                    withReplacement
+                );
+            }
         }
     }
 }

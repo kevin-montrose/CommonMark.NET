@@ -6,6 +6,44 @@ namespace CommonMark.Transformers
 {
     public abstract class ASTVisitor : ASTVisitorBase
     {
+        protected Inline CreateInline(string markdown, CommonMarkSettings settings)
+        {
+            if (settings == null || !settings.TrackSourcePosition) throw new InvalidOperationException("settings must have TrackSourcePosition = true to manipulate an AST");
+
+            var doc = CommonMarkConverter.Parse(markdown, settings);
+
+            var inlines = new List<Inline>();
+            foreach(var entry in doc.AsEnumerable())
+            {
+                if(entry.Inline != null)
+                {
+                    inlines.Add(entry.Inline);
+                }
+            }
+
+            if(inlines.Count != 1)
+            {
+                throw new InvalidOperationException("Couldn't create a singular inline from [" + markdown + "]");
+            }
+
+            return inlines[0];
+        }
+
+        protected Block CreateBlock(string markdown, CommonMarkSettings settings)
+        {
+            if (settings == null || !settings.TrackSourcePosition) throw new InvalidOperationException("settings must have TrackSourcePosition = true to manipulate an AST");
+
+            var doc = CommonMarkConverter.Parse(markdown, settings);
+
+            var block = doc.FirstChild;
+
+            if (block == null) throw new InvalidOperationException("Couldn't create a singular block from [" + markdown + "]");
+
+            if (!object.ReferenceEquals(doc.LastChild, block)) throw new InvalidOperationException("Couldn't create a singular block from [" + markdown + "]");
+
+            return block;
+        }
+
         protected override Inline OnInline(Inline inline)
         {
             switch (inline.Tag)
