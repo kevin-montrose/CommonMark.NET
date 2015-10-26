@@ -24,6 +24,16 @@ namespace CommonMark.Syntax
             }
         }
 
+        public string EquivalentMarkdown
+        {
+            get
+            {
+                if (OriginalMarkdown == null) return null;
+
+                return OriginalMarkdown.Substring(SourcePosition, SourceLength);
+            }
+        }
+
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class.
         /// </summary>

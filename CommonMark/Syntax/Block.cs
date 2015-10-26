@@ -83,6 +83,16 @@ namespace CommonMark.Syntax
             }
         }
 
+        public string EquivalentMarkdown
+        {
+            get
+            {
+                if (OriginalMarkdown == null) return null;
+
+                return OriginalMarkdown.Substring(SourcePosition, SourceLength);
+            }
+        }
+
         /// <summary>
         /// Gets or sets the type of the element this instance represents.
         /// </summary>

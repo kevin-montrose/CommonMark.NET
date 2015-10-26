@@ -34,7 +34,37 @@ namespace CommonMark.Tests
             }
         }
 
-        
+        class RewriteLinksVisitor : ASTVisitor
+        {
+            protected override Inline OnLink(Inline inline)
+            {
+                var markdown = inline.EquivalentMarkdown;
+                var startIx = markdown.IndexOf('(');
+                if (startIx == -1) return inline;
+
+                var endIx = markdown.LastIndexOf(')');
+                if (endIx == -1) return inline;
+
+                var newMarkdown = markdown.Substring(0, startIx + 1) + "http://example.com/" + markdown.Substring(endIx);
+
+                return CreateInline(newMarkdown, Settings);
+            }
+
+            protected override Block OnReferenceDefinition(Block block)
+            {
+                var markdown = block.EquivalentMarkdown;
+                var startIx = markdown.IndexOf(": ");
+                if (startIx == -1) return block;
+
+                var endIx = markdown.Length - 1;
+                while (char.IsWhiteSpace(markdown[endIx])) endIx--;
+
+                var newMarkdown = markdown.Substring(0, startIx + 2) + "http://example.com/" + markdown.Substring(endIx);
+
+                return CreateBlock(newMarkdown, Settings);
+            }
+        }
+
         [TestMethod]
         public void Remove()
         {
@@ -149,6 +179,43 @@ foo
 is it?
 
 bar
+",
+                    withReplacement
+                );
+            }
+
+            {
+                var markdown = @"
+[foo](http://google.com)
+
+>[**something**](http://google.com)
+>
+> ---
+>
+> *else*
+is it?
+
+[bar][1]
+
+  [1]: http://google.com
+";
+                var ast = CommonMarkConverter.Parse(markdown, Settings);
+                (new RewriteLinksVisitor()).Visit(ast);
+
+                var withReplacement = ast.OriginalMarkdown;
+                Assert.AreEqual(@"
+[foo](http://example.com)
+
+>[**something**](http://example.com)
+>
+> ---
+>
+> *else*
+is it?
+
+[bar][1]
+
+  [1]: http://example.com
 ",
                     withReplacement
                 );
