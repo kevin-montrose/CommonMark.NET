@@ -221,10 +221,9 @@ namespace CommonMark.Transformers
                     }
 
                     var childBlock = newVisiting.FirstChild;
-                    while (childBlock != null)
+                    if (childBlock != null)
                     {
                         toVisitBlocks.Push(childBlock);
-                        childBlock = childBlock.NextSibling;
                     }
 
                     var toVisitInlines = new Stack<Inline>();
@@ -256,10 +255,9 @@ namespace CommonMark.Transformers
                             }
 
                             var childInline = newInline.FirstChild;
-                            while (childInline != null)
+                            if (childInline != null)
                             {
                                 toVisitInlines.Push(childInline);
-                                childInline = childInline.NextSibling;
                             }
                         }
                     }
