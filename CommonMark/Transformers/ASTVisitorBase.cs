@@ -46,28 +46,32 @@ namespace CommonMark.Transformers
             while(pendingBlocks.Count > 0)
             {
                 var curBlock = pendingBlocks.Pop();
+
+                // we always needs to look at the sibling blocks, no matter what, so go ahead and queue it
+                if (curBlock.NextSibling != null)
+                {
+                    pendingBlocks.Push(curBlock.NextSibling);
+                }
+                
                 var curBlockStart = curBlock.SourcePosition;
                 var curBlockEnd = curBlock.SourcePosition + curBlock.SourceLength;
                 
                 bool isBeforeReplacementBlock, isAfterReplacementBlock, isOverlappingReplacementBlock, replaceIsInsideBlock;
                 ReplacementRelative(curBlockStart, curBlockEnd, removeStart, removeEnd, out isBeforeReplacementBlock, out isAfterReplacementBlock, out isOverlappingReplacementBlock, out replaceIsInsideBlock);
-
+                
                 if (isBeforeReplacementBlock)
                 {
                     // nothing to do, even with inlines and children
-                    continue;
                 }
 
                 if (isAfterReplacementBlock)
                 {
                     curBlock.SourcePosition += adjustmentSize;
-                    goto handleInlinesAndChildren;
                 }
 
                 if (replaceIsInsideBlock)
                 {
                     curBlock.SourceLength += adjustmentSize;
-                    goto handleInlinesAndChildren;
                 }
 
                 if (isOverlappingReplacementBlock)
@@ -75,14 +79,7 @@ namespace CommonMark.Transformers
                     throw new Exception("This shouldn't be possible?!");
                 }
 
-                handleInlinesAndChildren:
-
-                // push the next blocks we need to handle, if any
-                if (curBlock.NextSibling != null)
-                {
-                    pendingBlocks.Push(curBlock.NextSibling);
-                }
-
+                // push children
                 if(curBlock.FirstChild != null)
                 {
                     pendingBlocks.Push(curBlock.FirstChild);
@@ -98,6 +95,12 @@ namespace CommonMark.Transformers
                 while(pendingInlines.Count > 0)
                 {
                     var curInline = pendingInlines.Pop();
+                    // we always needs to look at the sibling inlines, no matter what, so go ahead and queue it
+                    if (curInline.NextSibling != null)
+                    {
+                        pendingInlines.Push(curInline.NextSibling);
+                    }
+
                     var curInlineStart = curInline.SourcePosition;
                     var curInlineEnd = curInline.SourcePosition + curInline.SourceLength;
 
@@ -106,28 +109,22 @@ namespace CommonMark.Transformers
 
                     if (isBeforeReplacementInline)
                     {
-                        // nothing to do, even with inlines and children
-                        continue;
+                        // nothing to do, even with children
                     }
 
                     if (isAfterReplacementInline)
                     {
-                        curBlock.SourcePosition += adjustmentSize;
+                        curInline.SourcePosition += adjustmentSize;
                     }
 
                     if (replaceIsInsideInline)
                     {
-                        curBlock.SourceLength += adjustmentSize;
+                        curInline.SourceLength += adjustmentSize;
                     }
 
                     if (isOverlappingReplacementInline)
                     {
                         throw new Exception("This shouldn't be possible?!");
-                    }
-
-                    if(curInline.NextSibling != null)
-                    {
-                        pendingInlines.Push(curInline.NextSibling);
                     }
 
                     if(curInline.FirstChild != null)
