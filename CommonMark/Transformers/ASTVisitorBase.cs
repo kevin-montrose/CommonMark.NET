@@ -118,7 +118,7 @@ namespace CommonMark.Transformers
 
         static void Replace(Block root, Block old, Block with)
         {
-            var withMarkdown = with.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourcePosition + with.SourceLength);
+            var withMarkdown = with.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourceLength);
 
             var parent = old.Parent;
             if (parent == null) return; // nothing to do
@@ -161,7 +161,7 @@ namespace CommonMark.Transformers
 
         static void Replace(Block root, Inline old, Inline with)
         {
-            var withMarkdown = with.Parent.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourcePosition + with.SourceLength);
+            var withMarkdown = with.Parent.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourceLength);
             with.Parent = old.Parent;
 
             Inline prev = null;
