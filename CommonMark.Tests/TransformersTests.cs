@@ -74,12 +74,12 @@ bar
             var settings = CommonMarkSettings.Default.Clone();
             settings.TrackSourcePosition = true;
             var ast = CommonMarkConverter.Parse(markdown, settings);
-            var roundtripMarkdown = CommonMarkConverter.ToMarkdown(ast);
+            var roundtripMarkdown = ast.OriginalMarkdown;
             Assert.AreEqual(markdown, roundtripMarkdown);
 
             (new RemoveVisitor()).Visit(ast);
 
-            var withoutBlockQuoteMarkdown = CommonMarkConverter.ToMarkdown(ast);
+            var withoutBlockQuoteMarkdown = ast.OriginalMarkdown;
             Assert.AreEqual(@"
 foo
 

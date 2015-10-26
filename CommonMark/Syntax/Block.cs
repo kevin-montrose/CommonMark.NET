@@ -63,12 +63,23 @@ namespace CommonMark.Syntax
             return e;
         }
 
+        string _OriginalMarkdown;
         /// <summary>
         /// Gets or sets the markdown that was parsed to generate this document.
         /// 
         /// This is only set if TrackSourcePosition = true.
         /// </summary>
-        public string OriginalMarkdown { get; set; }
+        public string OriginalMarkdown
+        {
+            get
+            {
+                return _OriginalMarkdown ?? Top.OriginalMarkdown;
+            }
+            set
+            {
+                _OriginalMarkdown = value;
+            }
+        }
 
         /// <summary>
         /// Gets or sets the type of the element this instance represents.

@@ -11,7 +11,6 @@ namespace CommonMark.Syntax
     {
         public Block Parent { get; set; }
 
-        string _OriginalMarkdown;
         /// <summary>
         /// Gets or sets the markdown that was parsed to generate this document.
         /// 
@@ -21,11 +20,7 @@ namespace CommonMark.Syntax
         {
             get
             {
-                return _OriginalMarkdown ?? (_OriginalMarkdown = Parent.OriginalMarkdown);
-            }
-            set
-            {
-                _OriginalMarkdown = value;
+                return Parent.Top.OriginalMarkdown;
             }
         }
 

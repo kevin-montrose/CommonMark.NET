@@ -344,28 +344,5 @@ namespace CommonMark
                 return writer.ToString();
             }
         }
-
-
-        internal static string ToMarkdown(Block ast)
-        {
-            var ret = new StringBuilder();
-            
-            foreach(var entry in ast.AsEnumerable())
-            {
-                if(entry.Block != null)
-                {
-                    continue;
-                }
-                else
-                {
-                    var markdown = entry.Inline.OriginalMarkdown;
-                    var part = markdown.Substring(entry.Inline.SourcePosition, entry.Inline.SourceLength);
-
-                    ret.Append(part);
-                }
-            }
-
-            return ret.ToString();
-        }
     }
 }
