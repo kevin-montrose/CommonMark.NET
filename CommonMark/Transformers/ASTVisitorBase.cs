@@ -257,6 +257,7 @@ namespace CommonMark.Transformers
 
             with.Top = root;
             with.SourcePosition = startRemoval;
+            with.SourceLength = withMarkdown.Length;
         }
 
         static void Replace(Block root, Inline old, Inline with)
@@ -289,6 +290,14 @@ namespace CommonMark.Transformers
             ReplaceMarkdown(root, startRemoval, stopRemoval, withMarkdown);
 
             with.SourcePosition = startRemoval;
+            with.SourceLength = withMarkdown.Length;
+
+#if DEBUG
+            if(with.EquivalentMarkdown != withMarkdown)
+            {
+                throw new Exception("uhhhh, replacement failed");
+            }
+#endif
         }
 
         public void Visit(Block root)
