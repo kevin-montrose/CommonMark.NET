@@ -16,28 +16,128 @@ namespace CommonMark.Transformers
             return inline;
         }
 
+        static void ReplacementRelative(int curStart, int curEnd, int removeStart, int removeEnd, out bool isBeforeReplacement, out bool isAfterReplacement, out bool isOverlappingReplacement, out bool replaceIsInside)
+        {
+            isBeforeReplacement = curEnd < removeStart;
+            isAfterReplacement = curStart > removeEnd;
+            isOverlappingReplacement =
+                (removeStart < curStart && removeEnd > curStart && removeEnd < curEnd) ||
+                (removeStart > curStart && curEnd > removeStart && removeEnd > curEnd);
+            replaceIsInside = curStart <= removeStart && curEnd >= removeEnd;
+
+#if DEBUG
+            var numHits =
+                (isBeforeReplacement ? 1 : 0) +
+                (isAfterReplacement ? 1 : 0) +
+                (isOverlappingReplacement ? 1 : 0) +
+                (replaceIsInside ? 1 : 0);
+
+            if (numHits != 1) throw new Exception("Math is dodge");
+#endif
+        }
+
         static void ReplaceMarkdown(Block root, int removeStart,int removeEnd, string replaceWithMarkdown)
         {
-            var adjustmentAfterEnd = replaceWithMarkdown.Length - (removeEnd - removeStart);
+            var adjustmentSize = replaceWithMarkdown.Length - (removeEnd - removeStart);
 
-            foreach(var entry in root.AsEnumerable())
+            var pendingBlocks = new Stack<Block>();
+            pendingBlocks.Push(root);
+
+            while(pendingBlocks.Count > 0)
             {
-                if(entry.Block != null)
+                var curBlock = pendingBlocks.Pop();
+                var curBlockStart = curBlock.SourcePosition;
+                var curBlockEnd = curBlock.SourcePosition + curBlock.SourceLength;
+                
+                bool isBeforeReplacementBlock, isAfterReplacementBlock, isOverlappingReplacementBlock, replaceIsInsideBlock;
+                ReplacementRelative(curBlockStart, curBlockEnd, removeStart, removeEnd, out isBeforeReplacementBlock, out isAfterReplacementBlock, out isOverlappingReplacementBlock, out replaceIsInsideBlock);
+
+                if (isBeforeReplacementBlock)
                 {
-                    if(entry.Block.SourcePosition >= removeStart)
-                    {
-                        entry.Block.SourcePosition += adjustmentAfterEnd;
-                    }
+                    // nothing to do, even with inlines and children
+                    continue;
                 }
-                else
+
+                if (isAfterReplacementBlock)
                 {
-                    if(entry.Inline.SourcePosition >= removeStart)
+                    curBlock.SourcePosition += adjustmentSize;
+                    goto handleInlinesAndChildren;
+                }
+
+                if (replaceIsInsideBlock)
+                {
+                    curBlock.SourceLength += adjustmentSize;
+                    goto handleInlinesAndChildren;
+                }
+
+                if (isOverlappingReplacementBlock)
+                {
+                    throw new Exception("This shouldn't be possible?!");
+                }
+
+                handleInlinesAndChildren:
+
+                // push the next blocks we need to handle, if any
+                if (curBlock.NextSibling != null)
+                {
+                    pendingBlocks.Push(curBlock.NextSibling);
+                }
+
+                if(curBlock.FirstChild != null)
+                {
+                    pendingBlocks.Push(curBlock.FirstChild);
+                }
+
+                // time to handle inlines
+                var pendingInlines = new Stack<Inline>();
+                if (curBlock.InlineContent != null)
+                {
+                    pendingInlines.Push(curBlock.InlineContent);
+                }
+
+                while(pendingInlines.Count > 0)
+                {
+                    var curInline = pendingInlines.Pop();
+                    var curInlineStart = curInline.SourcePosition;
+                    var curInlineEnd = curInline.SourcePosition + curInline.SourceLength;
+
+                    bool isBeforeReplacementInline, isAfterReplacementInline, isOverlappingReplacementInline, replaceIsInsideInline;
+                    ReplacementRelative(curBlockStart, curBlockEnd, removeStart, removeEnd, out isBeforeReplacementInline, out isAfterReplacementInline, out isOverlappingReplacementInline, out replaceIsInsideInline);
+
+                    if (isBeforeReplacementInline)
                     {
-                        entry.Inline.SourcePosition += adjustmentAfterEnd;
+                        // nothing to do, even with inlines and children
+                        continue;
+                    }
+
+                    if (isAfterReplacementInline)
+                    {
+                        curBlock.SourcePosition += adjustmentSize;
+                    }
+
+                    if (replaceIsInsideInline)
+                    {
+                        curBlock.SourceLength += adjustmentSize;
+                    }
+
+                    if (isOverlappingReplacementInline)
+                    {
+                        throw new Exception("This shouldn't be possible?!");
+                    }
+
+                    if(curInline.NextSibling != null)
+                    {
+                        pendingInlines.Push(curInline.NextSibling);
+                    }
+
+                    if(curInline.FirstChild != null)
+                    {
+                        pendingInlines.Push(curInline.FirstChild);
                     }
                 }
             }
-
+            
+            // update the actual markdown string, now that all the references are cleaned up
             root.OriginalMarkdown = root.OriginalMarkdown.Substring(0, removeStart) + replaceWithMarkdown + root.OriginalMarkdown.Substring(removeEnd);
         }
 
