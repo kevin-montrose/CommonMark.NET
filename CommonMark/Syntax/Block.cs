@@ -73,6 +73,8 @@ namespace CommonMark.Syntax
         {
             get
             {
+                if (Tag == BlockTag.Document) return _OriginalMarkdown;
+
                 return _OriginalMarkdown ?? Top.OriginalMarkdown;
             }
             set

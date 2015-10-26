@@ -33,8 +33,10 @@ is it?
 
 bar
 ";
+            var settings = CommonMarkSettings.Default.Clone();
+            settings.TrackSourcePosition = true;
 
-            var ast = CommonMarkConverter.Parse(markdown);
+            var ast = CommonMarkConverter.Parse(markdown, settings);
             string originalHtml;
             using (var str = new StringWriter())
             {

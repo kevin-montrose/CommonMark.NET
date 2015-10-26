@@ -16,7 +16,32 @@ namespace CommonMark.Transformers
             return inline;
         }
 
-        static void Remove(Block block)
+        static void ReplaceMarkdown(Block root, int removeStart,int removeEnd, string replaceWithMarkdown)
+        {
+            var adjustmentAfterEnd = replaceWithMarkdown.Length - (removeEnd - removeStart);
+
+            foreach(var entry in root.AsEnumerable())
+            {
+                if(entry.Block != null)
+                {
+                    if(entry.Block.SourcePosition >= removeStart)
+                    {
+                        entry.Block.SourcePosition += adjustmentAfterEnd;
+                    }
+                }
+                else
+                {
+                    if(entry.Inline.SourcePosition >= removeStart)
+                    {
+                        entry.Inline.SourcePosition += adjustmentAfterEnd;
+                    }
+                }
+            }
+
+            root.OriginalMarkdown = root.OriginalMarkdown.Substring(0, removeStart) + replaceWithMarkdown + root.OriginalMarkdown.Substring(removeEnd);
+        }
+
+        static void Remove(Block root, Block block)
         {
             var parent = block.Parent;
 
@@ -30,7 +55,7 @@ namespace CommonMark.Transformers
                 prevSibling = curSibling;
                 curSibling = curSibling.NextSibling;
             }
-
+            
             // remove this once Previous is removed
             if(block.NextSibling != null)
             {
@@ -52,9 +77,14 @@ namespace CommonMark.Transformers
 
             // remove once Previous is removed
             block.Previous = null;
+
+            // update the underlying markdown
+            var startRemoval = block.SourcePosition;
+            var stopRemoval = block.SourcePosition + block.SourceLength;
+            ReplaceMarkdown(root, startRemoval, stopRemoval, "");
         }
 
-        static void Remove(Inline inline)
+        static void Remove(Block root, Inline inline)
         {
             var parent = inline.Parent;
             
@@ -79,9 +109,14 @@ namespace CommonMark.Transformers
 
             inline.Parent = null;
             inline.NextSibling = null;
+
+            // update the underlying markdown
+            var startRemoval = inline.SourcePosition;
+            var stopRemoval = inline.SourcePosition + inline.SourceLength;
+            ReplaceMarkdown(root, startRemoval, stopRemoval, "");
         }
 
-        static void Replace(Block old, Block with)
+        static void Replace(Block root, Block old, Block with)
         {
             var parent = old.Parent;
             if (parent == null) return; // nothing to do
@@ -112,9 +147,18 @@ namespace CommonMark.Transformers
 
             // Remove once Previous is removed
             with.Previous = prevSibling;
+
+            // update markdown
+            var startRemoval = old.SourcePosition;
+            var stopRemoval = old.SourcePosition + old.SourceLength;
+            var withMarkdown = with.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourcePosition + with.SourceLength);
+            ReplaceMarkdown(root, startRemoval, stopRemoval, withMarkdown);
+
+            with.Top = root;
+            with.SourcePosition = startRemoval;
         }
 
-        static void Replace(Inline old, Inline with)
+        static void Replace(Block root, Inline old, Inline with)
         {
             with.Parent = old.Parent;
 
@@ -137,10 +181,20 @@ namespace CommonMark.Transformers
             }
 
             with.NextSibling = old.NextSibling;
+
+            var startRemoval = old.SourcePosition;
+            var stopRemoval = old.SourcePosition + old.SourceLength;
+            var withMarkdown = with.Parent.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourcePosition + with.SourceLength);
+            ReplaceMarkdown(root, startRemoval, stopRemoval, withMarkdown);
+
+            with.SourcePosition = startRemoval;
         }
 
         public void Visit(Block root)
         {
+            if (root == null) throw new ArgumentNullException("root");
+            if (root.OriginalMarkdown == null) throw new InvalidOperationException("AST must have been generated with TrackSourcePosition = true to be manipulable");
+
             var toVisitBlocks = new Stack<Block>();
             toVisitBlocks.Push(root);
             
@@ -151,13 +205,13 @@ namespace CommonMark.Transformers
 
                 if (newVisiting == null)
                 {
-                    Remove(visiting);
+                    Remove(root, visiting);
                 }
                 else
                 {
                     if (!object.ReferenceEquals(visiting, newVisiting))
                     {
-                        Replace(visiting, newVisiting);
+                        Replace(root, visiting, newVisiting);
                     }
 
                     if (newVisiting.NextSibling != null)
@@ -186,13 +240,13 @@ namespace CommonMark.Transformers
 
                         if (newInline == null)
                         {
-                            Remove(currentInline);
+                            Remove(root, currentInline);
                         }
                         else
                         {
                             if (!object.ReferenceEquals(currentInline, newInline))
                             {
-                                Replace(currentInline, newInline);
+                                Replace(root, currentInline, newInline);
                             }
 
                             if (newInline.NextSibling != null)
