@@ -213,5 +213,61 @@ Hello world
             }
             Assert.AreEqual("<table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>Help</td><td><strong>Display the</strong> <a href=\"/help\">help</a> window.</td></tr><tr><td>Close</td><td><em>Closes</em> a window</td></tr><tr></tr></tbody></table>\r\n", html);
         }
+
+        [TestMethod]
+        public void TableWithExtraPipes()
+        {
+            var markdown =
+@"| First Header  | Second Header |
+| ------------- | ------------- |
+| cell #11  | cell #12  |
+| cell #21  | cell #22  |";
+
+            var ast =
+                CommonMarkConverter.Parse(
+                    markdown,
+                    ReadSettings
+                );
+
+            var firstChild = ast.FirstChild;
+            Assert.AreEqual(BlockTag.Table, firstChild.Tag);
+            Assert.AreEqual(markdown, markdown.Substring(firstChild.SourcePosition, firstChild.SourceLength));
+
+            var headerRow = firstChild.FirstChild;
+            Assert.AreEqual(BlockTag.TableRow, headerRow.Tag);
+            Assert.AreEqual("First Header | Second Header\n", markdown.Substring(headerRow.SourcePosition, headerRow.SourceLength));
+
+            var headerCell1 = headerRow.FirstChild;
+            Assert.AreEqual(BlockTag.TableCell, headerCell1.Tag);
+            Assert.AreEqual("First Header", markdown.Substring(headerCell1.SourcePosition, headerCell1.SourceLength));
+
+            var headerCell2 = headerCell1.NextSibling;
+            Assert.AreEqual(BlockTag.TableCell, headerCell2.Tag);
+            Assert.AreEqual("Second Header", markdown.Substring(headerCell2.SourcePosition, headerCell2.SourceLength));
+
+            var firstRow = headerRow.NextSibling;
+            Assert.AreEqual(BlockTag.TableRow, firstRow.Tag);
+            Assert.AreEqual("| cell #11  | cell #12  |\n", markdown.Substring(firstRow.SourcePosition, firstRow.SourceLength));
+
+            var firstRowCell1 = firstRow.FirstChild;
+            Assert.AreEqual(BlockTag.TableCell, firstRowCell1.Tag);
+            Assert.AreEqual("cell #11", markdown.Substring(firstRowCell1.SourcePosition, firstRowCell1.SourceLength));
+
+            var firstRowCell2 = firstRowCell1.NextSibling;
+            Assert.AreEqual(BlockTag.TableCell, firstRowCell2.Tag);
+            Assert.AreEqual("cell #12", markdown.Substring(firstRowCell2.SourcePosition, firstRowCell2.SourceLength));
+
+            var secondRow = firstRow.NextSibling;
+            Assert.AreEqual(BlockTag.TableRow, secondRow.Tag);
+            Assert.AreEqual("| cell #21  | cell #22  |\n", markdown.Substring(secondRow.SourcePosition, secondRow.SourceLength));
+
+            var secondRowCell1 = secondRow.FirstChild;
+            Assert.AreEqual(BlockTag.TableCell, secondRowCell1.Tag);
+            Assert.AreEqual("cell #21", markdown.Substring(secondRowCell1.SourcePosition, secondRowCell1.SourceLength));
+
+            var secondRowCell2 = secondRowCell1.NextSibling;
+            Assert.AreEqual(BlockTag.TableCell, secondRowCell2.Tag);
+            Assert.AreEqual("cell #22", markdown.Substring(secondRowCell2.SourcePosition, secondRowCell2.SourceLength));
+        }
     }
 }
