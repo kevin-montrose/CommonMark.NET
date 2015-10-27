@@ -154,7 +154,7 @@ namespace CommonMark.Parser
                     if (text.Length > 0)
                     {
                         var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset);
-                        cell.SourceLastPosition = row.SourcePosition + offset;
+                        cell.SourceLastPosition = cell.SourcePosition + text.Length;
                         cell.StringContent = new StringContent();
                         cell.StringContent.Append(text, 0, text.Length);
 
@@ -167,14 +167,23 @@ namespace CommonMark.Parser
                             row.LastChild.NextSibling = cell;
                             row.LastChild = cell;
                         }
+
+                        cell.IsOpen = false;
                     }
 
                     offset += text.Length;
+
+                    // skip the |
                     offset++;
                 }
 
                 if (c == '\\')
                 {
+                    sb.Append(c);
+                    if(i + 1 < asStr.Length)
+                    {
+                        sb.Append(asStr[i + 1]);
+                    }
                     i++;
                 }
                 else
@@ -191,7 +200,7 @@ namespace CommonMark.Parser
                 if (text.Length > 0)
                 {
                     var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset);
-                    cell.SourceLastPosition = row.SourcePosition + offset;
+                    cell.SourceLastPosition = cell.SourcePosition + offset;
                     cell.StringContent = new StringContent();
                     cell.StringContent.Append(text, 0, text.Length);
 
@@ -204,6 +213,8 @@ namespace CommonMark.Parser
                         row.LastChild.NextSibling = cell;
                         row.LastChild = cell;
                     }
+
+                    cell.IsOpen = false;
                 }
             }
         }
@@ -245,6 +256,7 @@ namespace CommonMark.Parser
                     }
 
                     MakeTableCells(row, sb);
+                    row.IsOpen = false;
                 }
 
                 offset += lineLength;
