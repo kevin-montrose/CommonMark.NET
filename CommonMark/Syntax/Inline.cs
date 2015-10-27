@@ -165,6 +165,12 @@ namespace CommonMark.Syntax
         public string TargetUrl { get; set; }
 
         /// <summary>
+        /// The label on a reference used to populate TargetUrl and LiteralContent, tracked for
+        /// future rewriting.
+        /// </summary>
+        internal string TargetUrlAndLiteralContentPopulatedFromReferenceLabel { get; set; }
+
+        /// <summary>
         /// Gets or sets the first descendant of this element. This is only used if the <see cref="Tag"/> property specifies
         /// a type that can have nested elements. 
         /// </summary>

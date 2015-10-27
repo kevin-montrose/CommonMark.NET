@@ -528,6 +528,7 @@ namespace CommonMark.Parser
 
                 inl.TargetUrl = details.Url;
                 inl.LiteralContent = details.Title;
+                inl.TargetUrlAndLiteralContentPopulatedFromReferenceLabel = details.Label;
 
                 if (!isImage)
                 {
