@@ -20,11 +20,7 @@ namespace CommonMark.Tests
         [TestMethod]
         public void SimpleTable()
         {
-            var markdown =
-@"First Header  | Second Header
-------------- | -------------
-Content Cell  | Content Cell
-Content Cell  | Content Cell";
+            var markdown = "First Header | Second Header\n------------- | -------------\nContent Cell | Content Cell\nContent Cell | Content Cell\n";
 
             var ast = 
                 CommonMarkConverter.Parse(
@@ -35,6 +31,17 @@ Content Cell  | Content Cell";
             var firstChild = ast.FirstChild;
             Assert.AreEqual(BlockTag.Table, firstChild.Tag);
             Assert.AreEqual(markdown, markdown.Substring(firstChild.SourcePosition, firstChild.SourceLength));
+
+            var headerRow = firstChild.FirstChild;
+            Assert.AreEqual(BlockTag.TableRow, headerRow.Tag);
+            Assert.AreEqual("First Header | Second Header\n", markdown.Substring(headerRow.SourcePosition, headerRow.SourceLength));
+            var firstRow = headerRow.NextSibling;
+            Assert.AreEqual(BlockTag.TableRow, firstRow.Tag);
+            Assert.AreEqual("Content Cell | Content Cell\n", markdown.Substring(firstRow.SourcePosition, firstRow.SourceLength));
+            var secondRow = firstRow.NextSibling;
+            Assert.AreEqual(BlockTag.TableRow, secondRow.Tag);
+            Assert.AreEqual("Content Cell | Content Cell\n", markdown.Substring(secondRow.SourcePosition, secondRow.SourceLength));
+
         }
 
         [TestMethod]

@@ -136,6 +136,47 @@ namespace CommonMark.Parser
             return ret;
         }
 
+        static void MakeTableRows(Block table, StringBuilder sb)
+        {
+            var asStr = table.StringContent.ToString();
+            var lines = asStr.Split('\n');
+
+            var offset = 0;
+
+            for(var i = 0; i < lines.Length; i++)
+            {
+                var line = lines[i];
+                var parts = ParseTableLine(line, sb);
+                
+                var lineLength = line.Length;
+                var hasLineBreak = offset + lineLength < asStr.Length && asStr[offset + lineLength] == '\n';
+                if (hasLineBreak) lineLength++;
+
+                // skip the header row
+                if (i != 1)
+                {
+                    var row = new Block(BlockTag.TableRow, table.SourcePosition + offset);
+                    row.SourceLastPosition = row.SourcePosition + lineLength;
+
+                    row.StringContent = new StringContent();
+                    row.StringContent.Append(asStr, row.SourcePosition, row.SourceLength);
+
+                    if (table.LastChild == null)
+                    {
+                        table.FirstChild = row;
+                        table.LastChild = row;
+                    }
+                    else
+                    {
+                        table.LastChild.NextSibling = row;
+                        table.LastChild = row;
+                    }
+                }
+
+                offset += lineLength;
+            }
+        }
+
         static bool TryMakeTable(Block b, LineInfo line, CommonMarkSettings settings)
         {
             if ((settings.AdditionalFeatures & CommonMarkAdditionalFeatures.GithubStyleTables) == 0) return false;
@@ -195,6 +236,9 @@ namespace CommonMark.Parser
             if(wholeBlockIsTable)
             {
                 b.Tag = BlockTag.Table;
+
+                // create table rows
+                MakeTableRows(b, sb);
                 return true;
             }
 
@@ -230,6 +274,9 @@ namespace CommonMark.Parser
             {
                 b.SourceLastPosition = b.SourcePosition + tableBlockString.Length;
             }
+
+            // create table rows
+            MakeTableRows(b, sb);
 
             // put the new paragraph after the table
             newParagraph.NextSibling = b.NextSibling;

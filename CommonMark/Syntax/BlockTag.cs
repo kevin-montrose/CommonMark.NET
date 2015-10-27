@@ -70,8 +70,18 @@ namespace CommonMark.Syntax
         ReferenceDefinition,
 
         /// <summary>
-        /// A table block element
+        /// A table block
         /// </summary>
-        Table
+        Table,
+
+        /// <summary>
+        /// A table row block
+        /// </summary>
+        TableRow,
+
+        /// <summary>
+        /// A table cell block
+        /// </summary>
+        TableCell
     }
 }
