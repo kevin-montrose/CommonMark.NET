@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Globalization;
 using CommonMark.Syntax;
+using System.Text;
 
 namespace CommonMark.Parser
 {
@@ -99,11 +100,82 @@ namespace CommonMark.Parser
             }
         }
 
+        static List<string> ParseTableLine(string line, StringBuilder sb)
+        {
+            var ret = new List<string>();
+
+            pipes = 0;
+
+            var i = 0;
+            while (i < line.Length && char.IsWhiteSpace(line[i])) i++;
+
+            for (; i < line.Length; i++)
+            {
+                var c = line[i];
+                if (c == '\\')
+                {
+                    i++;
+                    continue;
+                }
+
+                if (c == '|')
+                {
+                    pipes++;
+                    ret.Add(sb.ToString());
+                    sb.Clear();
+                }
+                else
+                {
+                    sb.Append(c);
+                }
+            }
+
+            if (sb.Length != 0)
+            {
+                ret.Add(sb.ToString());
+                sb.Clear();
+            }
+
+            return ret;
+        }
+
         static bool TryMakeTable(Block b, CommonMarkSettings settings)
         {
             if ((settings.AdditionalFeatures & CommonMarkAdditionalFeatures.GithubStyleTables) == 0) return false;
 
-            throw new System.Exception();
+            var lines = b.StringContent.ToString().Split('\n');
+
+            if (lines.Length < 2) return false;
+
+            var sb = new StringBuilder();
+
+            var columnsLine = ParseTableLine(lines[0], sb);
+            if (columnsLine.Count == 1) return false;
+
+            var headerLine = ParseTableLine(lines[1], sb);
+            if (headerLine.Count == 1) return false;
+
+            foreach(var headerPart in headerLine)
+            {
+                var trimmed = headerPart.Trim();
+                if (trimmed.Length < 3) return false;
+
+                for(var i = 0; i <trimmed.Length; i++)
+                {
+                    // don't check for escapes, they don't count in header
+                    if (trimmed[i] != '-' && trimmed[i] != ':') return false;
+                }
+            }
+
+            while (columnsLine.Count > 0 && string.IsNullOrWhiteSpace(columnsLine[0])) columnsLine.RemoveAt(0);
+            while (columnsLine.Count > 0 && string.IsNullOrWhiteSpace(columnsLine[columnsLine.Count - 1])) columnsLine.RemoveAt(columnsLine.Count - 1);
+            while (headerLine.Count > 0 && string.IsNullOrWhiteSpace(headerLine[0])) headerLine.RemoveAt(0);
+            while (headerLine.Count > 0 && string.IsNullOrWhiteSpace(headerLine[headerLine.Count - 1])) headerLine.RemoveAt(headerLine.Count - 1);
+
+            if (columnsLine.Count < 2) return false;
+            if (headerLine.Count < columnsLine.Count) return false;
+
+            // it's a table!
         }
 
         public static void Finalize(Block b, LineInfo line, CommonMarkSettings settings)
