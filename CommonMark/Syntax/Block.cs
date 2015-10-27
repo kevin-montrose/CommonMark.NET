@@ -34,7 +34,6 @@ namespace CommonMark.Syntax
         {
             this.Tag = tag;
             this.StartLine = startLine;
-            this.EndLine = startLine;
             this.StartColumn = startColumn;
             this.SourcePosition = sourcePosition;
             this.IsOpen = true;
@@ -88,14 +87,7 @@ namespace CommonMark.Syntax
         [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
         [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
         public int StartColumn { get; set; }
-
-        /// <summary>
-        /// Gets or sets the number of the last line in the source text that contains this element.
-        /// </summary>
-        [Obsolete("This is deprecated in favor of SourcePosition/SourceLength and will be removed in future. If you have a use case where this property cannot be replaced with the new ones, please log an issue at https://github.com/Knagis/CommonMark.NET", false)]
-        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
-        public int EndLine { get; set; }
+        
 
         /// <summary>
         /// Gets or sets the position of the block element within the source data. This position is before 
@@ -190,13 +182,10 @@ namespace CommonMark.Syntax
         /// Gets or sets the next sibling of this block element. <c>null</c> if this is the last element.
         /// </summary>
         public Block NextSibling { get; set; }
-
-        /// <summary>
-        /// Gets or sets the previous sibling of this block element. <c>null</c> if this is the first element.
-        /// </summary>
-        [Obsolete("This property will be removed in future. If you have a use case where this property is required, please log an issue at https://github.com/Knagis/CommonMark.NET", false)]
-        [System.Diagnostics.DebuggerBrowsable(System.Diagnostics.DebuggerBrowsableState.Never)]
-        [System.ComponentModel.EditorBrowsable(System.ComponentModel.EditorBrowsableState.Never)]
-        public Block Previous { get; set; }
+        
+        internal Block Clone()
+        {
+            return (Block)this.MemberwiseClone();
+        }
     }
 }

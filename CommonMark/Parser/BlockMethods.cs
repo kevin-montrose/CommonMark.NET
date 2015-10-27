@@ -136,11 +136,12 @@ namespace CommonMark.Parser
             return ret;
         }
 
-        static bool TryMakeTable(Block b, CommonMarkSettings settings)
+        static bool TryMakeTable(Block b, LineInfo line, CommonMarkSettings settings)
         {
             if ((settings.AdditionalFeatures & CommonMarkAdditionalFeatures.GithubStyleTables) == 0) return false;
 
-            var lines = b.StringContent.ToString().Split('\n');
+            var asStr = b.StringContent.ToString();
+            var lines = asStr.Split('\n');
 
             if (lines.Length < 2) return false;
 
@@ -174,6 +175,7 @@ namespace CommonMark.Parser
 
             var lastTableLine = 1;
 
+            var takingCharsForTable = lines[0].Length + 1 + lines[1].Length + 1;
             // it's a table!
             for (var i = 2; i < lines.Length; i++)
             {
@@ -181,6 +183,7 @@ namespace CommonMark.Parser
                 if (parts.Count < 2) break;
 
                 lastTableLine = i;
+                takingCharsForTable += lines[i].Length + 1;
             }
 
             var wholeBlockIsTable =
@@ -194,7 +197,35 @@ namespace CommonMark.Parser
                 return true;
             }
 
-            throw new System.Exception();
+            // get the text of the table separate
+            var tableBlockString = b.StringContent.TakeFromStart(takingCharsForTable, trim: true);
+            var newBlock = new Block(BlockTag.Paragraph, b.SourcePosition + tableBlockString.Length);
+
+            // create the trailing paragraph, and set it's text and source positions
+            var newParagraph = b.Clone();
+            newParagraph.StringContent = b.StringContent;
+            if (settings.TrackSourcePosition)
+            {
+                newParagraph.SourcePosition = b.SourcePosition + tableBlockString.Length;
+                newParagraph.SourceLastPosition = newParagraph.SourcePosition + (asStr.Length - tableBlockString.Length);
+            }
+
+            // update the text of the table block
+            b.Tag = BlockTag.Table;
+            b.StringContent = new StringContent();
+            b.StringContent.Append(tableBlockString, 0, tableBlockString.Length);
+            if (settings.TrackSourcePosition)
+            {
+                b.SourceLastPosition = b.SourcePosition + tableBlockString.Length;
+            }
+
+            // put the new paragraph after the table
+            newParagraph.NextSibling = b.NextSibling;
+            b.NextSibling = newParagraph;
+
+            Finalize(newParagraph, line, settings);
+
+            return true;
         }
 
         public static void Finalize(Block b, LineInfo line, CommonMarkSettings settings)
@@ -214,16 +245,12 @@ namespace CommonMark.Parser
                     b.SourceLastPosition = line.CalculateOrigin(0, false);
             }
 
-#pragma warning disable 0618
-            b.EndLine = (line.LineNumber > b.StartLine) ? line.LineNumber - 1 : line.LineNumber;
-#pragma warning restore 0618
-
             switch (b.Tag)
             {
                 case BlockTag.Paragraph:
                     var sc = b.StringContent;
 
-                    if(TryMakeTable(b, settings))
+                    if(TryMakeTable(b, line, settings))
                     {
                         break;
                     }
@@ -325,9 +352,6 @@ namespace CommonMark.Parser
             if (lastChild != null)
             {
                 lastChild.NextSibling = child;
-#pragma warning disable 0618
-                child.Previous = lastChild;
-#pragma warning restore 0618
             }
             else
             {
