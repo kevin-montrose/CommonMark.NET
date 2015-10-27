@@ -153,10 +153,15 @@ namespace CommonMark.Parser
 
                     if (text.Length > 0)
                     {
-                        var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset);
-                        cell.SourceLastPosition = cell.SourcePosition + text.Length;
+                        var leadingWhiteSpace = 0;
+                        while (char.IsWhiteSpace(text[leadingWhiteSpace]) && leadingWhiteSpace < text.Length) leadingWhiteSpace++;
+                        var trailingWhiteSpace = 0;
+                        while (char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1]) && trailingWhiteSpace < text.Length) trailingWhiteSpace++;
+
+                        var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset + leadingWhiteSpace);
+                        cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
                         cell.StringContent = new StringContent();
-                        cell.StringContent.Append(text, 0, text.Length);
+                        cell.StringContent.Append(text, leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
 
                         if (row.LastChild == null)
                         {
@@ -175,6 +180,7 @@ namespace CommonMark.Parser
 
                     // skip the |
                     offset++;
+                    continue;
                 }
 
                 if (c == '\\')
@@ -199,10 +205,15 @@ namespace CommonMark.Parser
 
                 if (text.Length > 0)
                 {
-                    var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset);
-                    cell.SourceLastPosition = cell.SourcePosition + offset;
+                    var leadingWhiteSpace = 0;
+                    while (char.IsWhiteSpace(text[leadingWhiteSpace]) && leadingWhiteSpace < text.Length) leadingWhiteSpace++;
+                    var trailingWhiteSpace = 0;
+                    while (char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1]) && trailingWhiteSpace < text.Length) trailingWhiteSpace++;
+
+                    var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset + leadingWhiteSpace);
+                    cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
                     cell.StringContent = new StringContent();
-                    cell.StringContent.Append(text, 0, text.Length);
+                    cell.StringContent.Append(text, leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
 
                     if (row.LastChild == null)
                     {
