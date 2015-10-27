@@ -524,14 +524,11 @@ namespace CommonMark.Transformers
 #endif
         }
 
-        public void Visit(Block root)
+        void Rewrite(Block root)
         {
-            if (root == null) throw new ArgumentNullException("root");
-            if (root.OriginalMarkdown == null) throw new InvalidOperationException("AST must have been generated with TrackSourcePosition = true to be manipulable");
-
             var toVisitBlocks = new Stack<Block>();
             toVisitBlocks.Push(root);
-            
+
             while (toVisitBlocks.Count > 0)
             {
                 var visiting = toVisitBlocks.Pop();
@@ -596,6 +593,45 @@ namespace CommonMark.Transformers
                     }
                 }
             }
+        }
+
+        static void FixupReferences(Block root)
+        {
+            var refMap = root.ReferenceMap;
+
+            if (refMap == null) return;
+
+            VisitSelfAndChildren(
+                root,
+                block =>
+                {
+
+                },
+                inline =>
+                {
+                    var refd = inline.TargetUrlAndLiteralContentPopulatedFromReferenceLabel;
+                    if (refd == null) return;
+
+                    Reference details;
+                    if(!refMap.TryGetValue(refd, out details))
+                    {
+                        throw new CommonMarkException("Rewrite left a dangling reference [" + refd + "]");
+                    }
+
+                    inline.TargetUrl = details.Url;
+                    inline.LiteralContent = details.Title;
+                }
+            );
+        }
+
+        public void Visit(Block root)
+        {
+            if (root == null) throw new ArgumentNullException("root");
+            if (root.OriginalMarkdown == null) throw new InvalidOperationException("AST must have been generated with TrackSourcePosition = true to be manipulable");
+            if (root.NextSibling != null) throw new InvalidOperationException("Visit must start at the root of an AST");
+
+            Rewrite(root);
+            FixupReferences(root);
         }
     }
 }
