@@ -175,7 +175,6 @@ namespace CommonMark.Parser
 
             var lastTableLine = 1;
 
-            var takingCharsForTable = lines[0].Length + 1 + lines[1].Length + 1;
             // it's a table!
             for (var i = 2; i < lines.Length; i++)
             {
@@ -183,18 +182,31 @@ namespace CommonMark.Parser
                 if (parts.Count < 2) break;
 
                 lastTableLine = i;
-                takingCharsForTable += lines[i].Length + 1;
             }
 
-            var wholeBlockIsTable =
-                lastTableLine == (lines.Length - 1) ||
-                (lastTableLine == (lines.Length - 2) && string.IsNullOrWhiteSpace(lines[lines.Length - 1]));
+            if(lastTableLine + 1 < lines.Length && string.IsNullOrWhiteSpace(lines[lastTableLine + 1]))
+            {
+                lastTableLine++;
+            }
+
+            var wholeBlockIsTable = lastTableLine == (lines.Length - 1);
 
             // No need to break, the whole block is a table now
             if(wholeBlockIsTable)
             {
                 b.Tag = BlockTag.Table;
                 return true;
+            }
+
+            var takingCharsForTable = 0;
+            for (var i = 0; i <= lastTableLine; i++)
+            {
+                takingCharsForTable += lines[i].Length;
+                var hasFollowingLineBreak = takingCharsForTable < asStr.Length && asStr[takingCharsForTable] == '\n';
+                if (hasFollowingLineBreak)
+                {
+                    takingCharsForTable++;
+                }
             }
 
             // get the text of the table separate

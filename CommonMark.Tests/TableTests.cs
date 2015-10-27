@@ -45,7 +45,8 @@ Content Cell  | Content Cell";
 ------------- | -------------
 Content Cell  | Content Cell
 Content Cell  | Content Cell
-Hello world";
+Hello world
+";
 
             var ast =
                 CommonMarkConverter.Parse(
@@ -66,7 +67,7 @@ Content Cell  | Content Cell
 
             Assert.AreEqual(BlockTag.Paragraph, secondChild.Tag);
             var secondMarkdown = markdown.Substring(secondChild.SourcePosition, secondChild.SourceLength);
-            Assert.AreEqual("Hello world", secondMarkdown);
+            Assert.AreEqual("Hello world\n", secondMarkdown);
         }
     }
 }
