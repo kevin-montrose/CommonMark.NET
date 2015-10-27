@@ -572,7 +572,7 @@ namespace CommonMark.Parser
             while (block != null)
             {
                 var tag = block.Tag;
-                if (tag == BlockTag.Paragraph || tag == BlockTag.AtxHeader || tag == BlockTag.SETextHeader)
+                if (tag == BlockTag.Paragraph || tag == BlockTag.AtxHeader || tag == BlockTag.SETextHeader || tag == BlockTag.TableCell)
                 {
                     sc = block.StringContent;
                     if (sc != null)

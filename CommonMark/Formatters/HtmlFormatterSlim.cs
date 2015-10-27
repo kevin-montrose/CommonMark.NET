@@ -232,6 +232,7 @@ namespace CommonMark.Formatters
                 writer.WriteConstant("<th>");
                 InlinesToHtml(writer, curHeaderCell.InlineContent, settings, stack);
                 writer.WriteConstant("</th>");
+
                 curHeaderCell = curHeaderCell.NextSibling;
             }
 
@@ -249,9 +250,12 @@ namespace CommonMark.Formatters
                     writer.WriteConstant("<td>");
                     InlinesToHtml(writer, curRowCell.InlineContent, settings, stack);
                     writer.WriteConstant("</td>");
+
                     curRowCell = curRowCell.NextSibling;
                 }
                 writer.WriteConstant("</tr>");
+
+                curRow = curRow.NextSibling;
             }
             writer.WriteConstant("</tbody>");
             writer.WriteConstant("</table>");

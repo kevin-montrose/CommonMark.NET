@@ -2,19 +2,24 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using System;
 using System.Collections.Generic;
+using System.IO;
 
 namespace CommonMark.Tests
 {
     [TestClass]
     public class TableTests
     {
-        static CommonMarkSettings Settings;
+        static CommonMarkSettings ReadSettings;
+        static CommonMarkSettings WriteSettings;
 
         static TableTests()
         {
-            Settings = CommonMarkSettings.Default.Clone();
-            Settings.AdditionalFeatures = CommonMarkAdditionalFeatures.GithubStyleTables;
-            Settings.TrackSourcePosition = true;
+            ReadSettings = CommonMarkSettings.Default.Clone();
+            ReadSettings.AdditionalFeatures = CommonMarkAdditionalFeatures.GithubStyleTables;
+            ReadSettings.TrackSourcePosition = true;
+
+            WriteSettings = CommonMarkSettings.Default.Clone();
+            WriteSettings.AdditionalFeatures = CommonMarkAdditionalFeatures.GithubStyleTables;
         }
 
         [TestMethod]
@@ -25,8 +30,16 @@ namespace CommonMark.Tests
             var ast = 
                 CommonMarkConverter.Parse(
                     markdown,
-                    Settings
+                    ReadSettings
                 );
+
+            string html;
+            using (var str = new StringWriter())
+            {
+                CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                html = str.ToString();
+            }
+            Assert.AreEqual("<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content Cell</td><td>Content Cell</td></tr><tr><td>Content Cell</td><td>Content Cell</td></tr><tr></tr></tbody></table>\r\n", html);
 
             var firstChild = ast.FirstChild;
             Assert.AreEqual(BlockTag.Table, firstChild.Tag);
@@ -83,8 +96,16 @@ Hello world
             var ast =
                 CommonMarkConverter.Parse(
                     markdown,
-                    Settings
+                    ReadSettings
                 );
+
+            string html;
+            using (var str = new StringWriter())
+            {
+                CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                html = str.ToString();
+            }
+            Assert.AreEqual("<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content Cell</td><td>Content Cell</td></tr><tr><td>Content Cell</td><td>Content Cell</td></tr><tr></tr></tbody></table>\r\n<p>Hello world</p>\r\n\r\n", html);
 
             var firstChild = ast.FirstChild;
             var secondChild = firstChild.NextSibling;
@@ -154,12 +175,43 @@ Hello world
             var ast =
                 CommonMarkConverter.Parse(
                     markdown,
-                    Settings
+                    ReadSettings
                 );
+
+            string html;
+            using (var str = new StringWriter())
+            {
+                CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                html = str.ToString();
+            }
+            Assert.AreEqual("<p>Nope nope.</p>\r\n<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content Cell</td><td>Content Cell</td></tr><tr><td>Content Cell</td><td>Content Cell</td></tr><tr></tr></tbody></table>\r\n<p>Hello world</p>\r\n\r\n", html);
 
             Assert.AreEqual(BlockTag.Paragraph, ast.FirstChild.Tag);
             Assert.AreEqual(BlockTag.Table, ast.FirstChild.NextSibling.Tag);
             Assert.AreEqual(BlockTag.Paragraph, ast.FirstChild.NextSibling.NextSibling.Tag);
+        }
+
+        [TestMethod]
+        public void TableWithInlines()
+        {
+            var markdown =
+@" Name | Description          
+ ------------- | ----------- 
+ Help      | **Display the** [help](/help) window.
+ Close     | _Closes_ a window     ";
+
+            var ast =
+                CommonMarkConverter.Parse(
+                    markdown,
+                    ReadSettings
+                );
+            string html;
+            using (var str = new StringWriter())
+            {
+                CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                html = str.ToString();
+            }
+            Assert.AreEqual("<table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>Help</td><td><strong>Display the</strong> <a href=\"/help\">help</a> window.</td></tr><tr><td>Close</td><td><em>Closes</em> a window</td></tr><tr></tr></tbody></table>\r\n", html);
         }
     }
 }
