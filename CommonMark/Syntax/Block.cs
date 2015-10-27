@@ -69,7 +69,7 @@ namespace CommonMark.Syntax
         /// 
         /// This is only set if TrackSourcePosition = true.
         /// </summary>
-        public string OriginalMarkdown
+        internal string OriginalMarkdown
         {
             get
             {
@@ -83,7 +83,12 @@ namespace CommonMark.Syntax
             }
         }
 
-        public string EquivalentMarkdown
+        /// <summary>
+        /// Just the markdown actually defining this block.
+        /// 
+        /// This is only set if OriginalMarkdown is set
+        /// </summary>
+        internal string EquivalentMarkdown
         {
             get
             {
@@ -92,6 +97,11 @@ namespace CommonMark.Syntax
                 return OriginalMarkdown.Substring(SourcePosition, SourceLength);
             }
         }
+
+        /// <summary>
+        /// References definined by inlines in this block.
+        /// </summary>
+        internal List<string> DefinesReferenceLabels { get; set; }
 
         /// <summary>
         /// Gets or sets the type of the element this instance represents.

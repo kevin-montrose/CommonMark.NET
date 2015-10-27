@@ -74,13 +74,15 @@ namespace CommonMark.Parser
         /// Adds a new reference to the dictionary, if the label does not already exist there.
         /// Assumes that the length of the label does not exceed <see cref="Reference.MaximumReferenceLabelLength"/>.
         /// </summary>
-        private static void AddReference(Dictionary<string, Reference> refmap, StringPart label, string url, string title)
+        private static void AddReference(Block inBlock, Dictionary<string, Reference> refmap, StringPart label, string url, string title)
         {
             var normalizedLabel = NormalizeReference(label);
             if (refmap.ContainsKey(normalizedLabel))
                 return;
 
             refmap.Add(normalizedLabel, new Reference(normalizedLabel, url, title));
+
+            (inBlock.DefinesReferenceLabels ?? (inBlock.DefinesReferenceLabels = new List<string>())).Add(normalizedLabel);
         }
 
         // Return the next character in the subject, without advancing.
@@ -1163,7 +1165,7 @@ namespace CommonMark.Parser
         // Modify refmap if a reference is encountered.
         // Return 0 if no reference found, otherwise position of subject
         // after reference is parsed.
-        public static int ParseReference(Subject subj)
+        public static int ParseReference(Block inBlock, Subject subj)
         {
             string title;
             var startPos = subj.Position;
@@ -1235,7 +1237,7 @@ namespace CommonMark.Parser
             }
 
             // insert reference into refmap
-            AddReference(subj.ReferenceMap, lab.Value, url, title);
+            AddReference(inBlock, subj.ReferenceMap, lab.Value, url, title);
 
             return subj.Position;
 

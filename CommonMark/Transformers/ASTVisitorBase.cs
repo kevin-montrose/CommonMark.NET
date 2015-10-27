@@ -378,7 +378,7 @@ namespace CommonMark.Transformers
             }
             else
             {
-                // skip right over this
+                // skip right over block
                 prevSibling.NextSibling = block.NextSibling;
             }
 
@@ -391,6 +391,25 @@ namespace CommonMark.Transformers
             var startRemoval = block.SourcePosition;
             var stopRemoval = block.SourcePosition + block.SourceLength;
             ReplaceMarkdown(root, startRemoval, stopRemoval, "");
+
+            // remove any link definitions defined
+            VisitSelfAndChildren(
+                block,
+                b =>
+                {
+                    if(b.Tag == BlockTag.ReferenceDefinition)
+                    {
+                        if(b.DefinesReferenceLabels != null)
+                        {
+                            foreach(var label in b.DefinesReferenceLabels)
+                            {
+                                root.ReferenceMap.Remove(label);
+                            }
+                        }
+                    }
+                },
+                _ => { }
+            );
         }
 
         static void Remove(Block root, Inline inline)
@@ -427,6 +446,7 @@ namespace CommonMark.Transformers
 
         static void Replace(Block root, Block old, Block with)
         {
+            var definedInWith = with.Top.ReferenceMap;
             var withMarkdown = with.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourceLength);
 
             var parent = old.Parent;
@@ -471,6 +491,44 @@ namespace CommonMark.Transformers
 
             with.SourcePosition = startRemoval;
             with.SourceLastPosition = startRemoval + withMarkdown.Length;
+
+            // remove references from the old block
+            VisitSelfAndChildren(
+                old,
+                b =>
+                {
+                    if (b.Tag == BlockTag.ReferenceDefinition)
+                    {
+                        if (b.DefinesReferenceLabels != null)
+                        {
+                            foreach (var label in b.DefinesReferenceLabels)
+                            {
+                                root.ReferenceMap.Remove(label);
+                            }
+                        }
+                    }
+                },
+                i => { }
+            );
+
+            // add references fromt he new block
+            VisitSelfAndChildren(
+                with,
+                b =>
+                {
+                    if (b.Tag == BlockTag.ReferenceDefinition)
+                    {
+                        if (b.DefinesReferenceLabels != null)
+                        {
+                            foreach (var label in b.DefinesReferenceLabels)
+                            {
+                                root.ReferenceMap[label] = definedInWith[label];
+                            }
+                        }
+                    }
+                },
+                i => { }
+            );
 
 #if DEBUG
             if(with.EquivalentMarkdown != withMarkdown)
