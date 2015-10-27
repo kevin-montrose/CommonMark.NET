@@ -137,5 +137,29 @@ Content Cell  | Content Cell
             var secondMarkdown = markdown.Substring(secondChild.SourcePosition, secondChild.SourceLength);
             Assert.AreEqual("Hello world\n", secondMarkdown);
         }
+
+        [TestMethod]
+        public void WrappedTable()
+        {
+            var markdown =
+@"Nope nope.
+
+First Header  | Second Header
+------------- | -------------
+Content Cell  | Content Cell
+Content Cell  | Content Cell
+Hello world
+";
+
+            var ast =
+                CommonMarkConverter.Parse(
+                    markdown,
+                    Settings
+                );
+
+            Assert.AreEqual(BlockTag.Paragraph, ast.FirstChild.Tag);
+            Assert.AreEqual(BlockTag.Table, ast.FirstChild.NextSibling.Tag);
+            Assert.AreEqual(BlockTag.Paragraph, ast.FirstChild.NextSibling.NextSibling.Tag);
+        }
     }
 }

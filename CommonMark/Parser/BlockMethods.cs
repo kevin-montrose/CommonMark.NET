@@ -154,9 +154,9 @@ namespace CommonMark.Parser
                     if (text.Length > 0)
                     {
                         var leadingWhiteSpace = 0;
-                        while (char.IsWhiteSpace(text[leadingWhiteSpace]) && leadingWhiteSpace < text.Length) leadingWhiteSpace++;
+                        while (leadingWhiteSpace < text.Length && char.IsWhiteSpace(text[leadingWhiteSpace])) leadingWhiteSpace++;
                         var trailingWhiteSpace = 0;
-                        while (char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1]) && trailingWhiteSpace < text.Length) trailingWhiteSpace++;
+                        while (trailingWhiteSpace < text.Length && char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1])) trailingWhiteSpace++;
 
                         var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset + leadingWhiteSpace);
                         cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
@@ -206,9 +206,9 @@ namespace CommonMark.Parser
                 if (text.Length > 0)
                 {
                     var leadingWhiteSpace = 0;
-                    while (char.IsWhiteSpace(text[leadingWhiteSpace]) && leadingWhiteSpace < text.Length) leadingWhiteSpace++;
+                    while (leadingWhiteSpace < text.Length && char.IsWhiteSpace(text[leadingWhiteSpace])) leadingWhiteSpace++;
                     var trailingWhiteSpace = 0;
-                    while (char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1]) && trailingWhiteSpace < text.Length) trailingWhiteSpace++;
+                    while (trailingWhiteSpace < text.Length && char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1])) trailingWhiteSpace++;
 
                     var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset + leadingWhiteSpace);
                     cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
@@ -249,11 +249,12 @@ namespace CommonMark.Parser
                 // skip the header row
                 if (i != 1)
                 {
-                    var row = new Block(BlockTag.TableRow, table.SourcePosition + offset);
-                    row.SourceLastPosition = row.SourcePosition + lineLength;
+                    var rowStartsInDocument = table.SourcePosition + offset;
+                    var row = new Block(BlockTag.TableRow, rowStartsInDocument);
+                    row.SourceLastPosition = rowStartsInDocument + lineLength;
 
                     row.StringContent = new StringContent();
-                    row.StringContent.Append(asStr, row.SourcePosition, row.SourceLength);
+                    row.StringContent.Append(asStr,  offset, row.SourceLength);
 
                     if (table.LastChild == null)
                     {
