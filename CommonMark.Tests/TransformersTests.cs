@@ -204,9 +204,9 @@ is it?
 
                 var withReplacement = ast.OriginalMarkdown;
                 Assert.AreEqual(@"
-[foo](http://example.com)
+[foo](http://example.com/)
 
->[**something**](http://example.com)
+>[**something**](http://example.com/)
 >
 > ---
 >
@@ -215,9 +215,20 @@ is it?
 
 [bar][1]
 
-  [1]: http://example.com
+[1]: http://example.com/
 ",
                     withReplacement
+                );
+
+                string html;
+                using (var str = new StringWriter())
+                {
+                    CommonMarkConverter.ProcessStage3(ast, str);
+                    html = str.ToString();
+                }
+                Assert.AreEqual(
+                    "<p><a href=\"http://example.com/\">foo</a></p>\r\n<blockquote>\r\n<p><a href=\"http://example.com/\"><strong>something</strong></a></p>\r\n<hr />\r\n<p><em>else</em>\r\nis it?</p>\r\n</blockquote>\r\n<p><a href=\"http://example.com/\">bar</a></p>\r\n\r\n", 
+                    html
                 );
             }
         }
