@@ -136,6 +136,78 @@ namespace CommonMark.Parser
             return ret;
         }
 
+        static void MakeTableCells(Block row, StringBuilder sb)
+        {
+            var asStr = row.StringContent.ToString();
+
+            var offset = 0;
+
+            for(var i = 0; i < asStr.Length; i++)
+            {
+                var c = asStr[i];
+
+                if (c == '|')
+                {
+                    var text = sb.ToString();
+                    sb.Clear();
+
+                    if (text.Length > 0)
+                    {
+                        var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset);
+                        cell.SourceLastPosition = row.SourcePosition + offset;
+                        cell.StringContent = new StringContent();
+                        cell.StringContent.Append(text, 0, text.Length);
+
+                        if (row.LastChild == null)
+                        {
+                            row.FirstChild = row.LastChild = cell;
+                        }
+                        else
+                        {
+                            row.LastChild.NextSibling = cell;
+                            row.LastChild = cell;
+                        }
+                    }
+
+                    offset += text.Length;
+                    offset++;
+                }
+
+                if (c == '\\')
+                {
+                    i++;
+                }
+                else
+                {
+                    sb.Append(c);
+                }
+            }
+
+            if(sb.Length> 0)
+            {
+                var text = sb.ToString();
+                sb.Clear();
+
+                if (text.Length > 0)
+                {
+                    var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset);
+                    cell.SourceLastPosition = row.SourcePosition + offset;
+                    cell.StringContent = new StringContent();
+                    cell.StringContent.Append(text, 0, text.Length);
+
+                    if (row.LastChild == null)
+                    {
+                        row.FirstChild = row.LastChild = cell;
+                    }
+                    else
+                    {
+                        row.LastChild.NextSibling = cell;
+                        row.LastChild = cell;
+                    }
+                }
+            }
+        }
+
         static void MakeTableRows(Block table, StringBuilder sb)
         {
             var asStr = table.StringContent.ToString();
@@ -171,6 +243,8 @@ namespace CommonMark.Parser
                         table.LastChild.NextSibling = row;
                         table.LastChild = row;
                     }
+
+                    MakeTableCells(row, sb);
                 }
 
                 offset += lineLength;
