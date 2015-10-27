@@ -201,26 +201,11 @@ namespace CommonMark.Transformers
             Action<Block> visitInlinesOfBlock =
                 block =>
                 {
-                    var pendingInlines = new Stack<Inline>();
-                    if (block.InlineContent != null)
+                    var curInline = block.InlineContent;
+                    while(curInline != null)
                     {
-                        pendingInlines.Push(block.InlineContent);
-                    }
-
-                    while (pendingInlines.Count > 0)
-                    {
-                        var curInline = pendingInlines.Pop();
-                        onInline(curInline);
-
-                        if (curInline.NextSibling != null)
-                        {
-                            pendingInlines.Push(curInline.NextSibling);
-                        }
-
-                        if (curInline.FirstChild != null)
-                        {
-                            pendingInlines.Push(curInline.FirstChild);
-                        }
+                        VisitSelfAndChildren(curInline, onInline);
+                        curInline = curInline.NextSibling;
                     }
                 };
 
