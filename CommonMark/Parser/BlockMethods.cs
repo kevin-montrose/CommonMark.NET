@@ -104,8 +104,6 @@ namespace CommonMark.Parser
         {
             var ret = new List<string>();
 
-            pipes = 0;
-
             var i = 0;
             while (i < line.Length && char.IsWhiteSpace(line[i])) i++;
 
@@ -120,7 +118,6 @@ namespace CommonMark.Parser
 
                 if (c == '|')
                 {
-                    pipes++;
                     ret.Add(sb.ToString());
                     sb.Clear();
                 }
@@ -175,7 +172,29 @@ namespace CommonMark.Parser
             if (columnsLine.Count < 2) return false;
             if (headerLine.Count < columnsLine.Count) return false;
 
+            var lastTableLine = 1;
+
             // it's a table!
+            for (var i = 2; i < lines.Length; i++)
+            {
+                var parts = ParseTableLine(lines[i], sb);
+                if (parts.Count < 2) break;
+
+                lastTableLine = i;
+            }
+
+            var wholeBlockIsTable =
+                lastTableLine == (lines.Length - 1) ||
+                (lastTableLine == (lines.Length - 2) && string.IsNullOrWhiteSpace(lines[lines.Length - 1]));
+
+            // No need to break, the whole block is a table now
+            if(wholeBlockIsTable)
+            {
+                b.Tag = BlockTag.Table;
+                return true;
+            }
+
+            throw new System.Exception();
         }
 
         public static void Finalize(Block b, LineInfo line, CommonMarkSettings settings)
