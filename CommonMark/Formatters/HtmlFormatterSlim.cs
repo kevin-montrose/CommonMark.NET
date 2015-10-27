@@ -212,6 +212,51 @@ namespace CommonMark.Formatters
             writer.WriteConstant("\"");
         }
 
+        static void WriteTable(Block table, HtmlTextWriter writer, CommonMarkSettings settings, Stack<InlineStackEntry> stack)
+        {
+            if((settings.AdditionalFeatures & CommonMarkAdditionalFeatures.GithubStyleTables) == 0)
+            {
+                throw new CommonMarkException("Table encountered in AST, but GithubStyleTables are not enabled");
+            }
+
+            var header = table.FirstChild;
+            var firstRow = table.FirstChild.NextSibling;
+
+            writer.WriteConstant("<table>");
+            writer.WriteConstant("<thead>");
+            writer.WriteConstant("<tr>");
+
+            var curHeaderCell = header.FirstChild;
+            while(curHeaderCell != null)
+            {
+                writer.WriteConstant("<th>");
+                InlinesToHtml(writer, curHeaderCell.InlineContent, settings, stack);
+                writer.WriteConstant("</th>");
+                curHeaderCell = curHeaderCell.NextSibling;
+            }
+
+            writer.WriteConstant("</tr>");
+            writer.WriteConstant("</thead>");
+
+            writer.WriteConstant("<tbody>");
+            var curRow = firstRow;
+            while(curRow != null)
+            {
+                writer.WriteConstant("<tr>");
+                var curRowCell = curRow.FirstChild;
+                while(curRowCell != null)
+                {
+                    writer.WriteConstant("<td>");
+                    InlinesToHtml(writer, curRowCell.InlineContent, settings, stack);
+                    writer.WriteConstant("</td>");
+                    curRowCell = curRowCell.NextSibling;
+                }
+                writer.WriteConstant("</tr>");
+            }
+            writer.WriteConstant("</tbody>");
+            writer.WriteConstant("</table>");
+        }
+
         private static void BlocksToHtmlInner(HtmlTextWriter writer, Block block, CommonMarkSettings settings)
         {
             var stack = new Stack<BlockStackEntry>();
@@ -355,6 +400,10 @@ namespace CommonMark.Formatters
                             writer.WriteLineConstant("<hr />");
                         }
 
+                        break;
+
+                    case BlockTag.Table:
+                        WriteTable(block, writer, settings, inlineStack);
                         break;
 
                     case BlockTag.ReferenceDefinition:
