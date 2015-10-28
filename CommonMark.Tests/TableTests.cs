@@ -39,7 +39,7 @@ namespace CommonMark.Tests
                 CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
                 html = str.ToString();
             }
-            Assert.AreEqual("<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content Cell</td><td>Content Cell</td></tr><tr><td>Content Cell</td><td>Content Cell</td></tr><tr></tr></tbody></table>\r\n", html);
+            Assert.AreEqual("<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content Cell</td><td>Content Cell</td></tr><tr><td>Content Cell</td><td>Content Cell</td></tr></tbody></table>\r\n", html);
 
             var firstChild = ast.FirstChild;
             Assert.AreEqual(BlockTag.Table, firstChild.Tag);
@@ -56,6 +56,7 @@ namespace CommonMark.Tests
             var headerCell2 = headerCell1.NextSibling;
             Assert.AreEqual(BlockTag.TableCell, headerCell2.Tag);
             Assert.AreEqual("Second Header", markdown.Substring(headerCell2.SourcePosition, headerCell2.SourceLength));
+            Assert.IsNull(headerCell2.NextSibling);
 
             var firstRow = headerRow.NextSibling;
             Assert.AreEqual(BlockTag.TableRow, firstRow.Tag);
@@ -68,10 +69,12 @@ namespace CommonMark.Tests
             var firstRowCell2 = firstRowCell1.NextSibling;
             Assert.AreEqual(BlockTag.TableCell, firstRowCell2.Tag);
             Assert.AreEqual("Content Cell", markdown.Substring(firstRowCell2.SourcePosition, firstRowCell2.SourceLength));
+            Assert.IsNull(firstRowCell2.NextSibling);
 
             var secondRow = firstRow.NextSibling;
             Assert.AreEqual(BlockTag.TableRow, secondRow.Tag);
             Assert.AreEqual("Content Cell | Content Cell\n", markdown.Substring(secondRow.SourcePosition, secondRow.SourceLength));
+            Assert.IsNull(secondRow.NextSibling);
 
             var secondRowCell1 = secondRow.FirstChild;
             Assert.AreEqual(BlockTag.TableCell, secondRowCell1.Tag);
@@ -80,6 +83,7 @@ namespace CommonMark.Tests
             var secondRowCell2 = secondRowCell1.NextSibling;
             Assert.AreEqual(BlockTag.TableCell, secondRowCell2.Tag);
             Assert.AreEqual("Content Cell", markdown.Substring(secondRowCell2.SourcePosition, secondRowCell2.SourceLength));
+            Assert.IsNull(secondRowCell2.NextSibling);
         }
 
         [TestMethod]
@@ -105,7 +109,7 @@ Hello world
                 CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
                 html = str.ToString();
             }
-            Assert.AreEqual("<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content Cell</td><td>Content Cell</td></tr><tr><td>Content Cell</td><td>Content Cell</td></tr><tr></tr></tbody></table>\r\n<p>Hello world</p>\r\n\r\n", html);
+            Assert.AreEqual("<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content Cell</td><td>Content Cell</td></tr><tr><td>Content Cell</td><td>Content Cell</td></tr></tbody></table>\r\n<p>Hello world</p>\r\n\r\n", html);
 
             var firstChild = ast.FirstChild;
             var secondChild = firstChild.NextSibling;
@@ -129,6 +133,7 @@ Content Cell  | Content Cell
             var headerCell2 = headerCell1.NextSibling;
             Assert.AreEqual(BlockTag.TableCell, headerCell2.Tag);
             Assert.AreEqual("Second Header", markdown.Substring(headerCell2.SourcePosition, headerCell2.SourceLength));
+            Assert.IsNull(headerCell2.NextSibling);
 
             var firstRow = headerRow.NextSibling;
             Assert.AreEqual(BlockTag.TableRow, firstRow.Tag);
@@ -141,10 +146,12 @@ Content Cell  | Content Cell
             var firstRowCell2 = firstRowCell1.NextSibling;
             Assert.AreEqual(BlockTag.TableCell, firstRowCell2.Tag);
             Assert.AreEqual("Content Cell", markdown.Substring(firstRowCell2.SourcePosition, firstRowCell2.SourceLength));
+            Assert.IsNull(firstRowCell2.NextSibling);
 
             var secondRow = firstRow.NextSibling;
             Assert.AreEqual(BlockTag.TableRow, secondRow.Tag);
             Assert.AreEqual("Content Cell  | Content Cell\n", markdown.Substring(secondRow.SourcePosition, secondRow.SourceLength));
+            Assert.IsNull(secondRow.NextSibling);
 
             var secondRowCell1 = secondRow.FirstChild;
             Assert.AreEqual(BlockTag.TableCell, secondRowCell1.Tag);
@@ -153,6 +160,7 @@ Content Cell  | Content Cell
             var secondRowCell2 = secondRowCell1.NextSibling;
             Assert.AreEqual(BlockTag.TableCell, secondRowCell2.Tag);
             Assert.AreEqual("Content Cell", markdown.Substring(secondRowCell2.SourcePosition, secondRowCell2.SourceLength));
+            Assert.IsNull(secondRowCell2.NextSibling);
 
             Assert.AreEqual(BlockTag.Paragraph, secondChild.Tag);
             var secondMarkdown = markdown.Substring(secondChild.SourcePosition, secondChild.SourceLength);
@@ -184,7 +192,7 @@ Hello world
                 CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
                 html = str.ToString();
             }
-            Assert.AreEqual("<p>Nope nope.</p>\r\n<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content Cell</td><td>Content Cell</td></tr><tr><td>Content Cell</td><td>Content Cell</td></tr><tr></tr></tbody></table>\r\n<p>Hello world</p>\r\n\r\n", html);
+            Assert.AreEqual("<p>Nope nope.</p>\r\n<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content Cell</td><td>Content Cell</td></tr><tr><td>Content Cell</td><td>Content Cell</td></tr></tbody></table>\r\n<p>Hello world</p>\r\n\r\n", html);
 
             Assert.AreEqual(BlockTag.Paragraph, ast.FirstChild.Tag);
             Assert.AreEqual(BlockTag.Table, ast.FirstChild.NextSibling.Tag);
@@ -211,17 +219,13 @@ Hello world
                 CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
                 html = str.ToString();
             }
-            Assert.AreEqual("<table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>Help</td><td><strong>Display the</strong> <a href=\"/help\">help</a> window.</td></tr><tr><td>Close</td><td><em>Closes</em> a window</td></tr><tr></tr></tbody></table>\r\n", html);
+            Assert.AreEqual("<table><thead><tr><th>Name</th><th>Description</th></tr></thead><tbody><tr><td>Help</td><td><strong>Display the</strong> <a href=\"/help\">help</a> window.</td></tr><tr><td>Close</td><td><em>Closes</em> a window</td></tr></tbody></table>\r\n", html);
         }
 
         [TestMethod]
         public void TableWithExtraPipes()
         {
-            var markdown =
-@"| First Header  | Second Header |
-| ------------- | ------------- |
-| cell #11  | cell #12  |
-| cell #21  | cell #22  |";
+            var markdown ="| First Header  | Second Header |\n| ------------- | ------------- |\n| cell #11  | cell #12  |\n| cell #21  | cell #22  |\n";
 
             var ast =
                 CommonMarkConverter.Parse(
@@ -235,7 +239,7 @@ Hello world
 
             var headerRow = firstChild.FirstChild;
             Assert.AreEqual(BlockTag.TableRow, headerRow.Tag);
-            Assert.AreEqual("First Header | Second Header\n", markdown.Substring(headerRow.SourcePosition, headerRow.SourceLength));
+            Assert.AreEqual("| First Header  | Second Header |\n", markdown.Substring(headerRow.SourcePosition, headerRow.SourceLength));
 
             var headerCell1 = headerRow.FirstChild;
             Assert.AreEqual(BlockTag.TableCell, headerCell1.Tag);
@@ -244,6 +248,7 @@ Hello world
             var headerCell2 = headerCell1.NextSibling;
             Assert.AreEqual(BlockTag.TableCell, headerCell2.Tag);
             Assert.AreEqual("Second Header", markdown.Substring(headerCell2.SourcePosition, headerCell2.SourceLength));
+            Assert.IsNull(headerCell2.NextSibling);
 
             var firstRow = headerRow.NextSibling;
             Assert.AreEqual(BlockTag.TableRow, firstRow.Tag);
@@ -256,10 +261,12 @@ Hello world
             var firstRowCell2 = firstRowCell1.NextSibling;
             Assert.AreEqual(BlockTag.TableCell, firstRowCell2.Tag);
             Assert.AreEqual("cell #12", markdown.Substring(firstRowCell2.SourcePosition, firstRowCell2.SourceLength));
+            Assert.IsNull(firstRowCell2.NextSibling);
 
             var secondRow = firstRow.NextSibling;
             Assert.AreEqual(BlockTag.TableRow, secondRow.Tag);
             Assert.AreEqual("| cell #21  | cell #22  |\n", markdown.Substring(secondRow.SourcePosition, secondRow.SourceLength));
+            Assert.IsNull(secondRow.NextSibling);
 
             var secondRowCell1 = secondRow.FirstChild;
             Assert.AreEqual(BlockTag.TableCell, secondRowCell1.Tag);
@@ -268,6 +275,7 @@ Hello world
             var secondRowCell2 = secondRowCell1.NextSibling;
             Assert.AreEqual(BlockTag.TableCell, secondRowCell2.Tag);
             Assert.AreEqual("cell #22", markdown.Substring(secondRowCell2.SourcePosition, secondRowCell2.SourceLength));
+            Assert.IsNull(secondRowCell2.NextSibling);
         }
     }
 }

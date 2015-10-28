@@ -105,6 +105,9 @@ namespace CommonMark.Parser
             var ret = new List<string>();
 
             var i = 0;
+
+            if (i < line.Length && line[i] == '|') i++;
+
             while (i < line.Length && char.IsWhiteSpace(line[i])) i++;
 
             for (; i < line.Length; i++)
@@ -210,22 +213,25 @@ namespace CommonMark.Parser
                     var trailingWhiteSpace = 0;
                     while (trailingWhiteSpace < text.Length && char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1])) trailingWhiteSpace++;
 
-                    var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset + leadingWhiteSpace);
-                    cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
-                    cell.StringContent = new StringContent();
-                    cell.StringContent.Append(text, leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
-
-                    if (row.LastChild == null)
+                    if (text.Length - leadingWhiteSpace - trailingWhiteSpace > 0)
                     {
-                        row.FirstChild = row.LastChild = cell;
-                    }
-                    else
-                    {
-                        row.LastChild.NextSibling = cell;
-                        row.LastChild = cell;
-                    }
+                        var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset + leadingWhiteSpace);
+                        cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
+                        cell.StringContent = new StringContent();
+                        cell.StringContent.Append(text, leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
 
-                    cell.IsOpen = false;
+                        if (row.LastChild == null)
+                        {
+                            row.FirstChild = row.LastChild = cell;
+                        }
+                        else
+                        {
+                            row.LastChild.NextSibling = cell;
+                            row.LastChild = cell;
+                        }
+
+                        cell.IsOpen = false;
+                    }
                 }
             }
         }
@@ -247,7 +253,7 @@ namespace CommonMark.Parser
                 if (hasLineBreak) lineLength++;
 
                 // skip the header row
-                if (i != 1)
+                if (i != 1 && !string.IsNullOrWhiteSpace(line))
                 {
                     var rowStartsInDocument = table.SourcePosition + offset;
                     var row = new Block(BlockTag.TableRow, rowStartsInDocument);
