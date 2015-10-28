@@ -60,7 +60,7 @@ namespace CommonMark.Tests
                         fromTop++;
                     }
 
-                    var newMarkdown = "**" + fromTop + "** , _" + fromLeft + "_ " + cell.InlineContent.EquivalentMarkdown;
+                    var newMarkdown = fromTop + "," + fromLeft;
 
                     var replaceWith = CreateInline(newMarkdown, Settings);
 
@@ -78,7 +78,10 @@ namespace CommonMark.Tests
             protected override Inline OnInline(Inline cell)
             {
                 Inline replaceWith;
-                if (Replacements.TryGetValue(cell, out replaceWith)) return replaceWith;
+                if (Replacements.TryGetValue(cell, out replaceWith))
+                {
+                    return replaceWith;
+                }
 
                 return base.OnInline(cell);
             }
@@ -307,12 +310,22 @@ e | f | g | h";
             replacer.Replacements = discoverer.Replacements;
             replacer.Visit(ast);
 
+            var transformedMarkdown = ast.OriginalMarkdown;
+
+            // this is all fucked atm
+            Assert.AreEqual("", transformedMarkdown);
+
             string html;
             using (var str = new StringWriter())
             {
-                CommonMarkConverter.ProcessStage3(ast, str, settings);
+                var nopos = CommonMarkSettings.Default.Clone();
+                nopos.AdditionalFeatures |= CommonMarkAdditionalFeatures.GithubStyleTables;
+
+                CommonMarkConverter.ProcessStage3(ast, str, nopos);
                 html = str.ToString();
             }
+
+            Assert.AreEqual("<p>Let's play around with something trickier.</p>\r\n<h2>Table begins</h2>\r\n<table><thead><tr><th>1,1</th><th>1,2</th><th>1,3</th><th align=\"right\">1,4</th></tr></thead><tbody><tr><td>2,1</td><td>2,2</td><td>2,3</td><td align=\"right\">2,4</td></tr><tr><td>3,1</td><td>3,2</td><td>3,3</td><td align=\"right\">3,4</td></tr></tbody></table>\r\n", html);
         }
     }
 }

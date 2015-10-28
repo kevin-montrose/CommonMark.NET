@@ -183,6 +183,7 @@ namespace CommonMark.Parser
                         cell.Top = row.Top;
                         cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
                         cell.StringContent = new StringContent();
+                        cell.StringContent.PositionTracker = row.StringContent.PositionTracker;
                         cell.StringContent.Append(text, leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
 
                         if (row.LastChild == null)
@@ -239,6 +240,7 @@ namespace CommonMark.Parser
                         cell.Top = row.Top;
                         cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
                         cell.StringContent = new StringContent();
+                        cell.StringContent.PositionTracker = row.StringContent.PositionTracker;
                         cell.StringContent.Append(text, leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
 
                         if (row.LastChild == null)
@@ -283,6 +285,7 @@ namespace CommonMark.Parser
                     row.SourceLastPosition = rowStartsInDocument + lineLength;
 
                     row.StringContent = new StringContent();
+                    row.StringContent.PositionTracker = table.StringContent.PositionTracker;
                     row.StringContent.Append(asStr,  offset, row.SourceLength);
 
                     if (table.LastChild == null)
