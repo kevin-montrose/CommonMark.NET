@@ -84,6 +84,7 @@
     <Compile Include="Syntax\StringContentPart.cs" />
     <Compile Include="Transformers\ASTVisitor.cs" />
     <Compile Include="Transformers\ASTVisitorBase.cs" />
+    <Compile Include="Syntax\TableHeaderAlignment.cs" />
     <Compile Include="Utilities.cs" />
   </ItemGroup>
   <ItemGroup>

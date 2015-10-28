@@ -365,12 +365,6 @@ namespace CommonMark.Transformers
                 curSibling = curSibling.NextSibling;
             }
             
-            // remove this once Previous is removed
-            if(block.NextSibling != null)
-            {
-                block.NextSibling.Previous = block.Previous;
-            }
-
             // we removed the first element
             if(prevSibling == null)
             {
@@ -383,10 +377,7 @@ namespace CommonMark.Transformers
             }
 
             block.Parent = block.NextSibling = null;
-
-            // remove once Previous is removed
-            block.Previous = null;
-
+            
             // update the underlying markdown
             var startRemoval = block.SourcePosition;
             var stopRemoval = block.SourcePosition + block.SourceLength;
@@ -475,10 +466,7 @@ namespace CommonMark.Transformers
             }
 
             with.NextSibling = old.NextSibling;
-
-            // Remove once Previous is removed
-            with.Previous = prevSibling;
-
+            
             // update markdown
             var startRemoval = old.SourcePosition;
             var stopRemoval = old.SourcePosition + old.SourceLength;
