@@ -303,7 +303,6 @@ namespace CommonMark.Transformers
                         sibling = sibling.NextSibling;
                     }
 
-                    parentInline.AdjustSize(adjustmentSize);
                     parentInline = parentInline.ParentInline;
                 }
             }
@@ -333,7 +332,7 @@ namespace CommonMark.Transformers
                     },
                     i =>
                     {
-                        i.AdjustSize(adjustmentSize);
+                        //i.AdjustSize(adjustmentSize);
                     }
                 );
             }
@@ -455,15 +454,12 @@ namespace CommonMark.Transformers
             // copy out the reference map in with
             var definedInWith = with.Top.ReferenceMap;
 
-            // fixup the markdown
+            // get the markdown details
             var oldMarkdown = old.EquivalentMarkdown;
-            var withMarkdown = with.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourceLength);
-
             var startRemoval = old.SourcePosition;
             var stopRemoval = old.SourcePosition + old.SourceLength;
-
-            old.Top.OriginalMarkdown = old.Top.OriginalMarkdown.Substring(0, startRemoval) + withMarkdown + old.Top.OriginalMarkdown.Substring(stopRemoval);
-
+            var withMarkdown = with.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourceLength);
+            
             // find where to insert into the sibling chain
             Block prev = null;
             var cur = old.Parent.FirstChild;
@@ -493,7 +489,13 @@ namespace CommonMark.Transformers
 
             // fixup the other blocks & inlines that still exist in the document
             AdjustOffsetsAndSizes(with.NextSibling, null, with.Parent, null, withMarkdown.Length - oldMarkdown.Length);
+
+            // update with to match it's real content
+            with.SourceLength += withMarkdown.Length - oldMarkdown.Length;
             
+            // finally, rewrite the original markdown
+            with.Top.OriginalMarkdown = old.Top.OriginalMarkdown.Substring(0, startRemoval) + withMarkdown + with.Top.OriginalMarkdown.Substring(stopRemoval);
+
             // remove references from the old block
             VisitSelfAndChildren(
                 old,
@@ -542,14 +544,11 @@ namespace CommonMark.Transformers
 
         static void Replace(Block root, Inline old, Inline with)
         {
-            // fixup the markdown
+            // get the markdown details
             var oldMarkdown = old.EquivalentMarkdown;
-            var withMarkdown = with.ParentBlock.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourceLength);
-            
             var startRemoval = old.SourcePosition;
             var stopRemoval = old.SourcePosition + old.SourceLength;
-
-            old.ParentBlock.Top.OriginalMarkdown = old.ParentBlock.Top.OriginalMarkdown.Substring(0, startRemoval) + withMarkdown + old.ParentBlock.Top.OriginalMarkdown.Substring(stopRemoval);
+            var withMarkdown = with.ParentBlock.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourceLength);
 
             // find where to insert into the sibling chain
             Inline prev = null;
@@ -577,8 +576,15 @@ namespace CommonMark.Transformers
             with.SourcePosition = old.SourcePosition;
             with.SourceLastPosition = old.SourceLastPosition;
 
+            var markdownAdjustment = withMarkdown.Length - oldMarkdown.Length;
+
             // fixup the other blocks & inlines that still exist in the document
-            AdjustOffsetsAndSizes(null, with.NextSibling, with.ParentBlock, with.ParentInline, withMarkdown.Length - oldMarkdown.Length);
+            AdjustOffsetsAndSizes(null, with.NextSibling, with.ParentBlock, with.ParentInline, markdownAdjustment);
+
+            with.AdjustSize(markdownAdjustment);
+
+            // finally, rewrite the original markdown
+            with.ParentBlock.Top.OriginalMarkdown = with.ParentBlock.Top.OriginalMarkdown.Substring(0, startRemoval) + withMarkdown + with.ParentBlock.Top.OriginalMarkdown.Substring(stopRemoval);
 
 #if DEBUG
             if (with.EquivalentMarkdown != withMarkdown)

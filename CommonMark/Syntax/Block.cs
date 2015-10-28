@@ -1,6 +1,7 @@
 ﻿using CommonMark.Syntax;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Text;
 
 namespace CommonMark.Syntax
@@ -8,6 +9,7 @@ namespace CommonMark.Syntax
     /// <summary>
     /// Represents a block-level element of the parsed document.
     /// </summary>
+    [DebuggerDisplay("{OriginalMarkdown != null ? EquivalentMarkdown : ToString()}")]
     public sealed class Block
     {
         /// <summary>
