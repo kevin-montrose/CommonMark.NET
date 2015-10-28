@@ -119,6 +119,9 @@ namespace CommonMark.Transformers
                 case BlockTag.Paragraph: return OnParagraph(block);
                 case BlockTag.ReferenceDefinition: return OnReferenceDefinition(block);
                 case BlockTag.SETextHeader: return OnSETextHeader(block);
+                case BlockTag.Table: return OnTable(block);
+                case BlockTag.TableRow: return OnTableRow(block);
+                case BlockTag.TableCell: return OnTableCell(block);
                 default: throw new CommonMarkException("Unexpected BlockTag [" + block.Tag + "]");
             }
         }
@@ -179,6 +182,21 @@ namespace CommonMark.Transformers
         }
 
         protected virtual Block OnSETextHeader(Block block)
+        {
+            return base.OnBlock(block);
+        }
+
+        protected virtual Block OnTable(Block block)
+        {
+            return base.OnBlock(block);
+        }
+
+        protected virtual Block OnTableRow(Block block)
+        {
+            return base.OnBlock(block);
+        }
+
+        protected virtual Block OnTableCell(Block block)
         {
             return base.OnBlock(block);
         }

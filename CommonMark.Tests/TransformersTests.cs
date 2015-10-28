@@ -34,6 +34,56 @@ namespace CommonMark.Tests
             }
         }
 
+        class NumberTableCellsVisitor_1 : ASTVisitor
+        {
+            public Dictionary<Inline, Inline> Replacements  = new Dictionary<Inline, Inline>();
+
+            protected override Block OnTableCell(Block cell)
+            {
+                if (cell.InlineContent != null)
+                {
+                    var row = cell.Parent;
+                    var curCell = row.FirstChild;
+                    var fromLeft = 1;
+                    while (curCell != cell)
+                    {
+                        curCell = curCell.NextSibling;
+                        fromLeft++;
+                    }
+
+                    var table = row.Parent;
+                    var curRow = table.FirstChild;
+                    var fromTop = 1;
+                    while (curRow != row)
+                    {
+                        curRow = curRow.NextSibling;
+                        fromTop++;
+                    }
+
+                    var newMarkdown = "**" + fromTop + "** , _" + fromLeft + "_ " + cell.InlineContent.EquivalentMarkdown;
+
+                    var replaceWith = CreateInline(newMarkdown, Settings);
+
+                    Replacements[cell.InlineContent] = replaceWith;
+                }
+
+                return base.OnTableCell(cell);
+            }
+        }
+
+        class NumberTableCellsVisitor_2 : ASTVisitor
+        {
+            public Dictionary<Inline, Inline> Replacements;
+
+            protected override Inline OnInline(Inline cell)
+            {
+                Inline replaceWith;
+                if (Replacements.TryGetValue(cell, out replaceWith)) return replaceWith;
+
+                return base.OnInline(cell);
+            }
+        }
+
         class RewriteLinksVisitor : ASTVisitor
         {
             protected override Inline OnLink(Inline inline)
@@ -230,6 +280,38 @@ is it?
                     "<p><a href=\"http://example.com/\">foo</a></p>\r\n<blockquote>\r\n<p><a href=\"http://example.com/\"><strong>something</strong></a></p>\r\n<hr />\r\n<p><em>else</em>\r\nis it?</p>\r\n</blockquote>\r\n<p><a href=\"http://example.com/\">bar</a></p>\r\n\r\n", 
                     html
                 );
+            }
+        }
+
+        [TestMethod]
+        public void NumberTableCells()
+        {
+            var markdown = @"
+Let's play around with something trickier.
+
+## Table begins
+
+| Column #1 | Column #2 | Column #3 | Etc.
+  --------- |   ---     |   ----    | ---:
+a | b | c | d
+e | f | g | h";
+
+            var settings = Settings.Clone();
+            settings.AdditionalFeatures |= CommonMarkAdditionalFeatures.GithubStyleTables;
+
+            var ast = CommonMarkConverter.Parse(markdown, settings);
+            var discoverer = new NumberTableCellsVisitor_1();
+            discoverer.Visit(ast);
+            
+            var replacer = new NumberTableCellsVisitor_2();
+            replacer.Replacements = discoverer.Replacements;
+            replacer.Visit(ast);
+
+            string html;
+            using (var str = new StringWriter())
+            {
+                CommonMarkConverter.ProcessStage3(ast, str, settings);
+                html = str.ToString();
             }
         }
     }
