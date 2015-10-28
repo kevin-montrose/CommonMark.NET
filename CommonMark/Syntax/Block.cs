@@ -168,6 +168,11 @@ namespace CommonMark.Syntax
         public FencedCodeData FencedCodeData { get; set; }
 
         /// <summary>
+        /// Gets or sets the alignment specified as part of a table heading in a GithubStyleTables.
+        /// </summary>
+        public List<TableHeaderAlignment> TableHeaderAlignments { get; set; }
+
+        /// <summary>
         /// Gets or sets the heading level (as in <c>&lt;h1&gt;</c> or <c>&lt;h2&gt;</c>).
         /// </summary>
         public int HeaderLevel { get; set; }

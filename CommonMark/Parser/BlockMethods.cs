@@ -298,15 +298,47 @@ namespace CommonMark.Parser
             var headerLine = ParseTableLine(lines[1], sb);
             if (headerLine.Count == 1) return false;
 
+            var headerAlignment = new List<TableHeaderAlignment>();
+
             foreach(var headerPart in headerLine)
             {
                 var trimmed = headerPart.Trim();
                 if (trimmed.Length < 3) return false;
 
-                for(var i = 0; i <trimmed.Length; i++)
+                var validateFrom = 0;
+                var startsWithColon = trimmed[validateFrom] == ':';
+                if (startsWithColon) validateFrom++;
+
+                var validateTo = trimmed.Length - 1;
+                var endsWithColon = trimmed[validateTo] == ':';
+                if (endsWithColon) validateTo--;
+
+                for(var i = validateFrom; i <= validateTo; i++)
                 {
                     // don't check for escapes, they don't count in header
-                    if (trimmed[i] != '-' && trimmed[i] != ':') return false;
+                    if (trimmed[i] != '-') return false;
+                }
+
+                if(!startsWithColon && !endsWithColon)
+                {
+                    headerAlignment.Add(TableHeaderAlignment.None);
+                    continue;
+                }
+
+                if(startsWithColon && endsWithColon)
+                {
+                    headerAlignment.Add(TableHeaderAlignment.Center);
+                    continue;
+                }
+
+                if (startsWithColon)
+                {
+                    headerAlignment.Add(TableHeaderAlignment.Left);
+                }
+
+                if (endsWithColon)
+                {
+                    headerAlignment.Add(TableHeaderAlignment.Right);
                 }
             }
 
@@ -355,6 +387,7 @@ namespace CommonMark.Parser
             if(wholeBlockIsTable)
             {
                 b.Tag = BlockTag.Table;
+                b.TableHeaderAlignments = headerAlignment;
 
                 // create table rows
                 MakeTableRows(b, sb);
@@ -387,6 +420,7 @@ namespace CommonMark.Parser
 
             // update the text of the table block
             b.Tag = BlockTag.Table;
+            b.TableHeaderAlignments = headerAlignment;
             b.StringContent = new StringContent();
             b.StringContent.Append(tableBlockString, 0, tableBlockString.Length);
             if (settings.TrackSourcePosition)

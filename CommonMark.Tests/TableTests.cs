@@ -44,6 +44,10 @@ namespace CommonMark.Tests
             var firstChild = ast.FirstChild;
             Assert.AreEqual(BlockTag.Table, firstChild.Tag);
             Assert.AreEqual(markdown, markdown.Substring(firstChild.SourcePosition, firstChild.SourceLength));
+            Assert.IsNotNull(firstChild.TableHeaderAlignments);
+            Assert.AreEqual(2, firstChild.TableHeaderAlignments.Count);
+            Assert.AreEqual(TableHeaderAlignment.None, firstChild.TableHeaderAlignments[0]);
+            Assert.AreEqual(TableHeaderAlignment.None, firstChild.TableHeaderAlignments[1]);
 
             var headerRow = firstChild.FirstChild;
             Assert.AreEqual(BlockTag.TableRow, headerRow.Tag);
@@ -121,6 +125,10 @@ Content Cell  | Content Cell
 Content Cell  | Content Cell
 ";
             Assert.AreEqual(shouldMatch,firstMarkdown);
+            Assert.IsNotNull(firstChild.TableHeaderAlignments);
+            Assert.AreEqual(2, firstChild.TableHeaderAlignments.Count);
+            Assert.AreEqual(TableHeaderAlignment.None, firstChild.TableHeaderAlignments[0]);
+            Assert.AreEqual(TableHeaderAlignment.None, firstChild.TableHeaderAlignments[1]);
 
             var headerRow = firstChild.FirstChild;
             Assert.AreEqual(BlockTag.TableRow, headerRow.Tag);
@@ -296,6 +304,32 @@ Hello world
                 html = str.ToString();
             }
             Assert.AreEqual("<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>11</td><td></td></tr><tr><td>21</td><td>22</td></tr></tbody></table>\r\n", html);
+        }
+
+        [TestMethod]
+        public void TableAlignment()
+        {
+            var markdown =
+@"| H1  | H2 | H3 |      H4
+ ---    | :--   | ---:|   :-: |
+|1|2|3|4|
+";
+
+            var ast = CommonMarkConverter.Parse(markdown, ReadSettings);
+            var table = ast.FirstChild;
+            Assert.AreEqual(BlockTag.Table, table.Tag);
+            Assert.AreEqual(4, table.TableHeaderAlignments.Count);
+            Assert.AreEqual(TableHeaderAlignment.None, table.TableHeaderAlignments[0]);
+            Assert.AreEqual(TableHeaderAlignment.Left, table.TableHeaderAlignments[1]);
+            Assert.AreEqual(TableHeaderAlignment.Right, table.TableHeaderAlignments[2]);
+            Assert.AreEqual(TableHeaderAlignment.Center, table.TableHeaderAlignments[3]);
+            string html;
+            using (var str = new StringWriter())
+            {
+                CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                html = str.ToString();
+            }
+            Assert.AreEqual("<table><thead><tr><th>H1</th><th align=\"left\">H2</th><th align=\"right\">H3</th><th align=\"center\">H4</th></tr></thead><tbody><tr><td>1</td><td align=\"left\">2</td><td align=\"right\">3</td><td align=\"center\">4</td></tr></tbody></table>\r\n", html);
         }
     }
 }

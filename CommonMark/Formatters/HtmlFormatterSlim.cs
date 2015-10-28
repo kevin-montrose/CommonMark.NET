@@ -231,9 +231,24 @@ namespace CommonMark.Formatters
             var curHeaderCell = header.FirstChild;
             while(curHeaderCell != null)
             {
+                var alignment = table.TableHeaderAlignments[numHeadings];
+
                 numHeadings++;
 
-                writer.WriteConstant("<th>");
+                if (alignment == TableHeaderAlignment.None)
+                {
+                    writer.WriteConstant("<th>");
+                }
+                else
+                {
+                    switch (alignment)
+                    {
+                        case TableHeaderAlignment.Center: writer.WriteConstant("<th align=\"center\">"); break;
+                        case TableHeaderAlignment.Left: writer.WriteConstant("<th align=\"left\">"); break;
+                        case TableHeaderAlignment.Right: writer.WriteConstant("<th align=\"right\">"); break;
+                        default: throw new CommonMarkException("Unexpected TableHeaderAlignment [" + alignment + "]");
+                    }
+                }
                 InlinesToHtml(writer, curHeaderCell.InlineContent, settings, stack);
                 writer.WriteConstant("</th>");
 
@@ -254,9 +269,24 @@ namespace CommonMark.Formatters
 
                 while(curRowCell != null && numCells < numHeadings)
                 {
+                    var alignment = table.TableHeaderAlignments[numCells];
+
                     numCells++;
 
-                    writer.WriteConstant("<td>");
+                    if (alignment == TableHeaderAlignment.None)
+                    {
+                        writer.WriteConstant("<td>");
+                    }
+                    else
+                    {
+                        switch (alignment)
+                        {
+                            case TableHeaderAlignment.Center: writer.WriteConstant("<td align=\"center\">"); break;
+                            case TableHeaderAlignment.Left: writer.WriteConstant("<td align=\"left\">"); break;
+                            case TableHeaderAlignment.Right: writer.WriteConstant("<td align=\"right\">"); break;
+                            default: throw new CommonMarkException("Unexpected TableHeaderAlignment [" + alignment + "]");
+                        }
+                    }
                     InlinesToHtml(writer, curRowCell.InlineContent, settings, stack);
                     writer.WriteConstant("</td>");
 
