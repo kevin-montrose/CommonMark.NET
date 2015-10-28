@@ -9,7 +9,9 @@ namespace CommonMark.Syntax
     /// </summary>
     public sealed class Inline
     {
-        public Block Parent { get; set; }
+        public Block ParentBlock { get; set; }
+
+        public Inline ParentInline { get; set; }
 
         /// <summary>
         /// Gets or sets the markdown that was parsed to generate this document.
@@ -20,7 +22,7 @@ namespace CommonMark.Syntax
         {
             get
             {
-                return Parent.Top.OriginalMarkdown;
+                return ParentBlock.Top.OriginalMarkdown;
             }
         }
 
@@ -37,16 +39,17 @@ namespace CommonMark.Syntax
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class.
         /// </summary>
-        public Inline(Block parent)
+        public Inline(Block parent, Inline parentInline)
         {
-            Parent = parent;
+            ParentBlock = parent;
+            ParentInline = parentInline;
         }
 
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class.
         /// </summary>
         /// <param name="tag">The type of inline element.</param>
-        public Inline(Block parent, InlineTag tag) : this(parent)
+        public Inline(Block parent, Inline parentInline, InlineTag tag) : this(parent, parentInline)
         {
             this.Tag = tag;
         }
@@ -56,7 +59,7 @@ namespace CommonMark.Syntax
         /// </summary>
         /// <param name="tag">The type of inline element. Should be one of the types that require literal content, for example, <see cref="InlineTag.Code"/>.</param>
         /// <param name="content">The literal contents of the inline element.</param>
-        public Inline(Block parent, InlineTag tag, string content) : this(parent)
+        public Inline(Block parent, Inline parentInline, InlineTag tag, string content) : this(parent, parentInline)
         {
             this.Tag = tag;
             this.LiteralContent = content;
@@ -65,7 +68,7 @@ namespace CommonMark.Syntax
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class.
         /// </summary>
-        internal Inline(Block parent, InlineTag tag, string content, int startIndex, int length) : this(parent)
+        internal Inline(Block parent, Inline parentInline, InlineTag tag, string content, int startIndex, int length) : this(parent, parentInline)
         {
             this.Tag = tag;
             this.LiteralContentValue.Source = content;
@@ -77,7 +80,7 @@ namespace CommonMark.Syntax
         /// Initializes a new instance of the <see cref="Inline"/> class. The element type is set to <see cref="InlineTag.String"/>
         /// </summary>
         /// <param name="content">The literal string contents of the inline element.</param>
-        public Inline(Block parent, string content) : this(parent)
+        public Inline(Block parent, Inline parentInline, string content) : this(parent, parentInline)
         {
             // this is not assigned because it is the default value.
             ////this.Tag = InlineTag.String;
@@ -88,7 +91,7 @@ namespace CommonMark.Syntax
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class. The element type is set to <see cref="InlineTag.String"/>
         /// </summary>
-        internal Inline(Block parent, string content, int sourcePosition, int sourceLastPosition) : this(parent)
+        internal Inline(Block parent, Inline parentInline, string content, int sourcePosition, int sourceLastPosition) : this(parent, parentInline)
         {
             this.LiteralContent = content;
             this.SourcePosition = sourcePosition;
@@ -98,7 +101,7 @@ namespace CommonMark.Syntax
         /// <summary>
         /// Initializes a new instance of the <see cref="Inline"/> class. The element type is set to <see cref="InlineTag.String"/>
         /// </summary>
-        internal Inline(Block parent, string content, int startIndex, int length, int sourcePosition, int sourceLastPosition) : this(parent)
+        internal Inline(Block parent, Inline parentInline, string content, int startIndex, int length, int sourcePosition, int sourceLastPosition) : this(parent, parentInline)
         {
             this.LiteralContentValue.Source = content;
             this.LiteralContentValue.StartIndex = startIndex;
@@ -112,15 +115,15 @@ namespace CommonMark.Syntax
         /// </summary>
         /// <param name="tag">The type of inline element. Should be one of the types that contain child elements, for example, <see cref="InlineTag.Emphasis"/>.</param>
         /// <param name="content">The first descendant element of the inline that is being created.</param>
-        public Inline(Block parent, InlineTag tag, Inline content) : this(parent)
+        public Inline(Block parent, Inline parentInline, InlineTag tag, Inline content) : this(parent, parentInline)
         {
             this.Tag = tag;
             this.FirstChild = content;
         }
 
-        internal static Inline CreateLink(Block parent, Inline label, string url, string title)
+        internal static Inline CreateLink(Block parent, Inline parentInline, Inline label, string url, string title)
         {
-            return new Inline(parent)
+            return new Inline(parent, parentInline)
             {
                 Tag = InlineTag.Link,
                 FirstChild = label,
@@ -200,10 +203,21 @@ namespace CommonMark.Syntax
             set { this.SourceLastPosition = this.SourcePosition + value; }
         }
 
-        internal void AdjustSize(int delta)
+        /// <summary>
+        /// Move the whole inline, keeping size the same
+        /// </summary>
+        internal void AdjustOffset(int delta)
         {
             SourcePosition += delta;
             SourceLastPosition += delta;
+        }
+        
+        /// <summary>
+        /// Adjust the size of the inline, keeping the origin point the same
+        /// </summary>
+        internal void AdjustSize(int delta)
+        {
+            SourceLength += delta;
         }
 
         /// <summary>

@@ -123,7 +123,7 @@ bar
                 Assert.AreEqual(markdown, roundtripMarkdown);
             }
 
-                {
+            /*{
                 var markdown = @"
 foo
 
@@ -149,7 +149,7 @@ bar
 ",
                     withoutBlockQuoteMarkdown
                 );
-            }
+            }*/
 
             {
                 var markdown = @"

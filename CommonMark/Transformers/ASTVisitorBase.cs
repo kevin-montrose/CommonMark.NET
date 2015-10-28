@@ -72,7 +72,6 @@ namespace CommonMark.Transformers
                 if (curBlock.SourceLength < narrowestBlock.SourceLength)
                 {
                     narrowestBlock = curBlock;
-
                 }
 
                 if (curBlock.FirstChild != null)
@@ -238,33 +237,22 @@ namespace CommonMark.Transformers
             visitInlinesOfBlock(forBlock);
         }
 
-        static void ReplaceMarkdown(Block root, int removeStart, int removeEnd, string replaceWithMarkdown)
+        static void AdjustOffsetsAndSizes(Block firstSiblingBlock, Inline firstSiblingInline, Block firstParentBlock, Inline firstParentInline, int adjustmentSize)
         {
-            var adjustmentSize = replaceWithMarkdown.Length - (removeEnd - removeStart);
+            var blocksNeedingOffsetAdjustment = new List<Block>();
+            var inlinesNeedingOffsetAdjustment = new List<Inline>();
 
-            Block narrowestBlock;
-            Inline narrowestInline;
-            IEnumerable<Inline> narrowestInlineParentInlines;
-            FindNarrowestBlockAndInline(root, removeStart, removeEnd, out narrowestBlock, out narrowestInline, out narrowestInlineParentInlines);
+            var blocksNeedingSizeAdjustment = new List<Block>();
+            var inlinesNeedingSizeAdjustment = new List<Inline>();
 
             // adjust offset of sibling blocks
             //   all of their children must also be offset
             {
-                var sibling = narrowestBlock.NextSibling;
-                while(sibling != null)
+                var sibling = firstSiblingBlock;
+                while (sibling != null)
                 {
-                    VisitSelfAndChildren(
-                        sibling,
-                        b =>
-                        {
-                            b.AdjustPosition(adjustmentSize);
-                        },
-                        i =>
-                        {
-                            i.AdjustSize(adjustmentSize);
-                        }
-                    );
-
+                    blocksNeedingOffsetAdjustment.Add(sibling);
+                    
                     sibling = sibling.NextSibling;
                 }
             }
@@ -272,87 +260,112 @@ namespace CommonMark.Transformers
             // adjust offset of sibling inlines
             //   all of their children must also be offset
             {
-                if(narrowestInline != null)
+                var sibling = firstSiblingInline;
+                while (sibling != null)
                 {
-                    var sibling = narrowestInline.NextSibling;
+                    inlinesNeedingOffsetAdjustment.Add(sibling);
+
+                    sibling = sibling.NextSibling;
+                }
+            }
+
+            // adjust the size of the parent blocks,
+            //    *and* the _offsets_ of their siblings
+            {
+                var parentBlock = firstParentBlock;
+                while(parentBlock != null)
+                {
+                    blocksNeedingSizeAdjustment.Add(parentBlock);
+
+                    var sibling = parentBlock.NextSibling;
                     while(sibling != null)
                     {
-                        VisitSelfAndChildren(
-                            sibling,
-                            i =>
-                            {
-                                i.AdjustSize(adjustmentSize);
-                            }
-                        );
-
+                        blocksNeedingOffsetAdjustment.Add(sibling);
                         sibling = sibling.NextSibling;
                     }
+
+                    parentBlock = parentBlock.Parent;
                 }
             }
 
-            // adjust the offsets of the *siblings* of the inline parents of the narrowest inline, and their children
+            // adjust the size of the parent inlines,
+            //   *and* the _offsets_ of their siblings
             {
-                if(narrowestInlineParentInlines != null)
+                var parentInline = firstParentInline;
+                while(parentInline != null)
                 {
-                    foreach(var parentInline in narrowestInlineParentInlines)
-                    {
-                        var sibling = parentInline.NextSibling;
-                        while (sibling != null)
-                        {
-                            VisitSelfAndChildren(
-                                sibling,
-                                i =>
-                                {
-                                    i.AdjustSize(adjustmentSize);
-                                }
-                            );
+                    inlinesNeedingSizeAdjustment.Add(parentInline);
 
-                            sibling = sibling.NextSibling;
-                        }
+                    var sibling = parentInline.NextSibling;
+                    while(sibling != null)
+                    {
+                        inlinesNeedingOffsetAdjustment.Add(sibling);
+                        sibling = sibling.NextSibling;
                     }
+
+                    parentInline.AdjustSize(adjustmentSize);
+                    parentInline = parentInline.ParentInline;
                 }
             }
 
-            // adjust the **size** narrowest inline/block and of it's parents
+            foreach(var block in blocksNeedingOffsetAdjustment)
             {
-                var toAdjustBlocks = new Stack<Block>();
-
-                if (narrowestInline != null)
-                {
-                    toAdjustBlocks.Push(narrowestInline.Parent);
-                    narrowestInline.SourceLength += adjustmentSize;
-
-                    // we also need to increase the size of any parent *inlines* of the narrowest inline
-                    foreach(var parent in narrowestInlineParentInlines)
+                VisitSelfAndChildren(
+                    block,
+                    b =>
                     {
-                        parent.SourceLength += adjustmentSize;
-                    }
-                }
-                else
-                {
-                    toAdjustBlocks.Push(narrowestBlock);
-                }
-
-                while (toAdjustBlocks.Count > 0)
-                {
-                    var toAdjustBlock = toAdjustBlocks.Pop();
-
-                    if (toAdjustBlock.Parent != null)
+                        b.AdjustOffset(adjustmentSize);
+                    },
+                    i =>
                     {
-                        toAdjustBlocks.Push(toAdjustBlock.Parent);
+                        i.AdjustOffset(adjustmentSize);
                     }
-
-                    toAdjustBlock.SourceLength += adjustmentSize;
-                }
+                );
             }
-            
-            // update the actual markdown string, now that all the references are cleaned up
-            root.OriginalMarkdown = root.OriginalMarkdown.Substring(0, removeStart) + replaceWithMarkdown + root.OriginalMarkdown.Substring(removeEnd);
+
+            foreach(var block in blocksNeedingSizeAdjustment)
+            {
+                VisitSelfAndChildren(
+                    block,
+                    b =>
+                    {
+                        b.AdjustSize(adjustmentSize);
+                    },
+                    i =>
+                    {
+                        i.AdjustSize(adjustmentSize);
+                    }
+                );
+            }
+
+            foreach (var inline in inlinesNeedingOffsetAdjustment)
+            {
+                VisitSelfAndChildren(
+                    inline,
+                    i =>
+                    {
+                        i.AdjustOffset(adjustmentSize);
+                    }
+                );
+            }
+
+            foreach (var inline in inlinesNeedingSizeAdjustment)
+            {
+                VisitSelfAndChildren(
+                    inline,
+                    i =>
+                    {
+                        i.AdjustSize(adjustmentSize);
+                    }
+                );
+            }
         }
 
         static void Remove(Block root, Block block)
         {
-            var parent = block.Parent;
+            throw new NotImplementedException();
+
+            /*var parent = block.Parent;
 
             // we just removed the root, there's nothing to do
             if (parent == null) return;
@@ -400,12 +413,14 @@ namespace CommonMark.Transformers
                     }
                 },
                 _ => { }
-            );
+            );*/
         }
 
         static void Remove(Block root, Inline inline)
         {
-            var parent = inline.Parent;
+            throw new NotImplementedException();
+
+            /*var parent = inline.ParentBlock;
             
             Inline prevSibling = null;
             var curSibling = parent.InlineContent;
@@ -426,60 +441,59 @@ namespace CommonMark.Transformers
                 prevSibling.NextSibling = inline.NextSibling;
             }
 
-            inline.Parent = null;
+            inline.ParentBlock = null;
             inline.NextSibling = null;
 
             // update the underlying markdown
             var startRemoval = inline.SourcePosition;
             var stopRemoval = inline.SourcePosition + inline.SourceLength;
-            ReplaceMarkdown(root, startRemoval, stopRemoval, "");
+            ReplaceMarkdown(root, startRemoval, stopRemoval, "");*/
         }
 
         static void Replace(Block root, Block old, Block with)
         {
+            // copy out the reference map in with
             var definedInWith = with.Top.ReferenceMap;
+
+            // fixup the markdown
+            var oldMarkdown = old.EquivalentMarkdown;
             var withMarkdown = with.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourceLength);
 
-            var parent = old.Parent;
-            if (parent == null) return; // nothing to do
-
-            // with's parent is now old's parent
-            with.Parent = parent;
-
-            Block prevSibling = null;
-            var curSibling = parent.FirstChild;
-            while(curSibling != old)
-            {
-                prevSibling = curSibling;
-                curSibling = curSibling.NextSibling;
-            }
-
-            // it's the first child, so we need to update the parent
-            if (prevSibling == null)
-            {
-                parent.FirstChild = with;
-            }
-            else
-            {
-                // it's in the middle or end of the list, so just update the previous
-                prevSibling.NextSibling = with;
-            }
-
-            with.NextSibling = old.NextSibling;
-            
-            // update markdown
             var startRemoval = old.SourcePosition;
             var stopRemoval = old.SourcePosition + old.SourceLength;
 
-            with.Top = root;
-            with.SourcePosition = startRemoval;
-            with.SourceLastPosition = startRemoval + withMarkdown.Length;
+            old.Top.OriginalMarkdown = old.Top.OriginalMarkdown.Substring(0, startRemoval) + withMarkdown + old.Top.OriginalMarkdown.Substring(stopRemoval);
 
-            ReplaceMarkdown(root, startRemoval, stopRemoval, withMarkdown);
+            // find where to insert into the sibling chain
+            Block prev = null;
+            var cur = old.Parent.FirstChild;
+            while (cur != old)
+            {
+                prev = cur;
+                cur = cur.NextSibling;
+            }
 
-            with.SourcePosition = startRemoval;
-            with.SourceLastPosition = startRemoval + withMarkdown.Length;
+            // now start update the AST
+            with.Parent = old.Parent;
+            with.Top = old.Top;
 
+            // it's the first child, so we need to update the parent
+            if (prev == null)
+            {
+                with.Parent.FirstChild = with;
+            }
+            else
+            {
+                prev.NextSibling = with;
+            }
+
+            with.NextSibling = old.NextSibling;
+            with.SourcePosition = old.SourcePosition;
+            with.SourceLastPosition = old.SourceLastPosition;
+
+            // fixup the other blocks & inlines that still exist in the document
+            AdjustOffsetsAndSizes(with.NextSibling, null, with.Parent, null, withMarkdown.Length - oldMarkdown.Length);
+            
             // remove references from the old block
             VisitSelfAndChildren(
                 old,
@@ -528,21 +542,31 @@ namespace CommonMark.Transformers
 
         static void Replace(Block root, Inline old, Inline with)
         {
-            var withMarkdown = with.Parent.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourceLength);
-            with.Parent = old.Parent;
+            // fixup the markdown
+            var oldMarkdown = old.EquivalentMarkdown;
+            var withMarkdown = with.ParentBlock.Top.OriginalMarkdown.Substring(with.SourcePosition, with.SourceLength);
+            
+            var startRemoval = old.SourcePosition;
+            var stopRemoval = old.SourcePosition + old.SourceLength;
 
+            old.ParentBlock.Top.OriginalMarkdown = old.ParentBlock.Top.OriginalMarkdown.Substring(0, startRemoval) + withMarkdown + old.ParentBlock.Top.OriginalMarkdown.Substring(stopRemoval);
+
+            // find where to insert into the sibling chain
             Inline prev = null;
-            var cur = old.Parent.InlineContent;
+            var cur = old.ParentBlock.InlineContent;
             while(cur != old)
             {
                 prev = cur;
                 cur = cur.NextSibling;
             }
 
+            // now start update the AST
+            with.ParentBlock = old.ParentBlock;
+            
             // it's the first child, so we need to update the parent
             if (prev == null)
             {
-                old.Parent.InlineContent = with;
+                with.ParentBlock.InlineContent = with;
             }
             else
             {
@@ -550,20 +574,14 @@ namespace CommonMark.Transformers
             }
 
             with.NextSibling = old.NextSibling;
+            with.SourcePosition = old.SourcePosition;
+            with.SourceLastPosition = old.SourceLastPosition;
 
-            var startRemoval = old.SourcePosition;
-            var stopRemoval = old.SourcePosition + old.SourceLength;
-
-            with.SourcePosition = startRemoval;
-            with.SourceLastPosition = startRemoval + withMarkdown.Length;
-
-            ReplaceMarkdown(root, startRemoval, stopRemoval, withMarkdown);
-
-            with.SourcePosition = startRemoval;
-            with.SourceLastPosition = startRemoval + withMarkdown.Length;
+            // fixup the other blocks & inlines that still exist in the document
+            AdjustOffsetsAndSizes(null, with.NextSibling, with.ParentBlock, with.ParentInline, withMarkdown.Length - oldMarkdown.Length);
 
 #if DEBUG
-            if(with.EquivalentMarkdown != withMarkdown)
+            if (with.EquivalentMarkdown != withMarkdown)
             {
                 throw new Exception("uhhhh, replacement failed");
             }

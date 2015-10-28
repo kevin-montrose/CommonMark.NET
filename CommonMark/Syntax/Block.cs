@@ -151,10 +151,21 @@ namespace CommonMark.Syntax
             set { this.SourceLastPosition = this.SourcePosition + value; }
         }
 
-        internal void AdjustPosition(int delta)
+        /// <summary>
+        /// Move the whole block, keeping size the same
+        /// </summary>
+        internal void AdjustOffset(int delta)
         {
             SourcePosition += delta;
             SourceLastPosition += delta;
+        }
+
+        /// <summary>
+        /// Adjust the size of the block, keeping the origin point the same
+        /// </summary>
+        internal void AdjustSize(int delta)
+        {
+            SourceLength += delta;
         }
 
         /// <summary>
