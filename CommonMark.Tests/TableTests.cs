@@ -132,7 +132,7 @@ Content Cell  | Content Cell
 
             var headerRow = firstChild.FirstChild;
             Assert.AreEqual(BlockTag.TableRow, headerRow.Tag);
-            Assert.AreEqual("First Header  | Second Header\n", headerRow.EquivalentMarkdown);
+            Assert.AreEqual("First Header  | Second Header\r\n", headerRow.EquivalentMarkdown);
 
             var headerCell1 = headerRow.FirstChild;
             Assert.AreEqual(BlockTag.TableCell, headerCell1.Tag);
@@ -145,7 +145,7 @@ Content Cell  | Content Cell
 
             var firstRow = headerRow.NextSibling;
             Assert.AreEqual(BlockTag.TableRow, firstRow.Tag);
-            Assert.AreEqual("Content Cell  | Content Cell\n", firstRow.EquivalentMarkdown);
+            Assert.AreEqual("Content Cell  | Content Cell\r\n", firstRow.EquivalentMarkdown);
 
             var firstRowCell1 = firstRow.FirstChild;
             Assert.AreEqual(BlockTag.TableCell, firstRowCell1.Tag);
@@ -158,7 +158,7 @@ Content Cell  | Content Cell
 
             var secondRow = firstRow.NextSibling;
             Assert.AreEqual(BlockTag.TableRow, secondRow.Tag);
-            Assert.AreEqual("Content Cell  | Content Cell\n", secondRow.EquivalentMarkdown);
+            Assert.AreEqual("Content Cell  | Content Cell\r\n", secondRow.EquivalentMarkdown);
             Assert.IsNull(secondRow.NextSibling);
 
             var secondRowCell1 = secondRow.FirstChild;
@@ -172,7 +172,7 @@ Content Cell  | Content Cell
 
             Assert.AreEqual(BlockTag.Paragraph, secondChild.Tag);
             var secondMarkdown = secondChild.EquivalentMarkdown;
-            Assert.AreEqual("Hello world\n", secondMarkdown);
+            Assert.AreEqual("Hello world\r\n", secondMarkdown);
         }
 
         [TestMethod]

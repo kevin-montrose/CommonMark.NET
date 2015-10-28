@@ -25,6 +25,18 @@ namespace CommonMark.Syntax
             get { return this._length; }
         }
 
+        internal StringContent() { }
+
+        internal StringContent(StringPart[] parts, Parser.PositionTracker tracker) : this()
+        {
+            PositionTracker = tracker;
+
+            foreach(var part in parts)
+            {
+                Append(part.Source, part.StartIndex, part.Length);
+            }
+        }
+
         private void RecalculateLength()
         {
             this._length = 0;

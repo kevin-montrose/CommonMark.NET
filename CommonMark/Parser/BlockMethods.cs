@@ -2,6 +2,7 @@
 using System.Globalization;
 using CommonMark.Syntax;
 using System.Text;
+using System;
 
 namespace CommonMark.Parser
 {
@@ -141,7 +142,7 @@ namespace CommonMark.Parser
 
         static void MakeTableCells(Block row, StringBuilder sb)
         {
-            var asStr = row.StringContent.ToString();
+            var asStr = row.EquivalentMarkdown;
 
             var offset = 0;
 
@@ -242,7 +243,7 @@ namespace CommonMark.Parser
 
         static void MakeTableRows(Block table, StringBuilder sb)
         {
-            var asStr = table.StringContent.ToString();
+            var asStr = table.EquivalentMarkdown;
             var lines = asStr.Split('\n');
 
             var offset = 0;
@@ -291,7 +292,7 @@ namespace CommonMark.Parser
         {
             if ((settings.AdditionalFeatures & CommonMarkAdditionalFeatures.GithubStyleTables) == 0) return false;
 
-            var asStr = b.StringContent.ToString();
+            var asStr = b.EquivalentMarkdown;
             var lines = asStr.Split('\n');
 
             if (lines.Length < 2) return false;
@@ -412,25 +413,32 @@ namespace CommonMark.Parser
             }
 
             // get the text of the table separate
-            var tableBlockString = b.StringContent.TakeFromStart(takingCharsForTable, trim: true);
+
+            var parts = b.StringContent.RetrieveParts();
+            var belongToTable = new StringPart[lastTableLine + 1];
+            Array.Copy(parts.Array, parts.Offset, belongToTable, 0, belongToTable.Length);
+            var belongToParagraph = new StringPart[parts.Count - (lastTableLine + 1)];
+            Array.Copy(parts.Array, parts.Offset + lastTableLine + 1, belongToParagraph, 0, belongToParagraph.Length);
+
+            var tableStringContent = new StringContent(belongToTable, b.StringContent.PositionTracker);
+            var paragraphStringContent = new StringContent(belongToParagraph, b.StringContent.PositionTracker);
 
             // create the trailing paragraph, and set it's text and source positions
             var newParagraph = b.Clone();
-            newParagraph.StringContent = b.StringContent;
+            newParagraph.StringContent = paragraphStringContent;
             if (settings.TrackSourcePosition)
             {
-                newParagraph.SourcePosition = b.SourcePosition + tableBlockString.Length;
-                newParagraph.SourceLastPosition = newParagraph.SourcePosition + (asStr.Length - tableBlockString.Length);
+                newParagraph.SourcePosition = b.SourcePosition + takingCharsForTable;
+                newParagraph.SourceLastPosition = newParagraph.SourcePosition + (asStr.Length - takingCharsForTable);
             }
 
             // update the text of the table block
             b.Tag = BlockTag.Table;
             b.TableHeaderAlignments = headerAlignment;
-            b.StringContent = new StringContent();
-            b.StringContent.Append(tableBlockString, 0, tableBlockString.Length);
+            b.StringContent = tableStringContent;
             if (settings.TrackSourcePosition)
             {
-                b.SourceLastPosition = b.SourcePosition + tableBlockString.Length;
+                b.SourceLastPosition = b.SourcePosition + takingCharsForTable;
             }
 
             // create table rows
