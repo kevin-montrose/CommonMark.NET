@@ -3,6 +3,7 @@ using System.Globalization;
 using CommonMark.Syntax;
 using System.Text;
 using System;
+using System.IO;
 
 namespace CommonMark.Parser
 {
@@ -101,10 +102,21 @@ namespace CommonMark.Parser
             }
         }
 
-        static List<string> ParseTableLine(string line, StringBuilder sb)
+        static List<string> ParseTableLine(string rawLine, StringBuilder sb)
         {
             var ret = new List<string>();
 
+            string line;
+            using (var str = new StringReader(rawLine))
+            {
+                var reader = new TabTextReader(str);
+                var li = new LineInfo(false);
+                reader.ReadLine(li);
+                if (li.Line == null) return ret;
+
+                line = li.Line;
+            }
+            
             var i = 0;
 
             if (i < line.Length && line[i] == '|') i++;
@@ -133,7 +145,11 @@ namespace CommonMark.Parser
 
             if (sb.Length != 0)
             {
-                ret.Add(sb.ToString());
+                var str = sb.ToString();
+                if (!string.IsNullOrWhiteSpace(str))
+                {
+                    ret.Add(str);
+                }
                 sb.Clear();
             }
 
