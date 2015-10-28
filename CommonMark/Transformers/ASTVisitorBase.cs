@@ -270,7 +270,7 @@ namespace CommonMark.Transformers
             }
 
             // adjust the size of the parent blocks,
-            //    *and* the _offsets_ of their siblings
+            //    *and* the _offsets_ of their siblings (and the siblings' children)
             {
                 var parentBlock = firstParentBlock;
                 while(parentBlock != null)
@@ -289,7 +289,7 @@ namespace CommonMark.Transformers
             }
 
             // adjust the size of the parent inlines,
-            //   *and* the _offsets_ of their siblings
+            //   *and* the _offsets_ of their siblings (and the siblings' children)
             {
                 var parentInline = firstParentInline;
                 while(parentInline != null)
@@ -346,12 +346,14 @@ namespace CommonMark.Transformers
 
         static void Remove(Block root, Block block)
         {
-            throw new NotImplementedException();
-
-            /*var parent = block.Parent;
+            var parent = block.Parent;
 
             // we just removed the root, there's nothing to do
             if (parent == null) return;
+
+            var firstSibling = block.NextSibling;
+            var startRemoval = block.SourcePosition;
+            var stopRemoval = block.SourcePosition + block.SourceLength;
 
             Block prevSibling = null;
             var curSibling = parent.FirstChild;
@@ -373,38 +375,25 @@ namespace CommonMark.Transformers
             }
 
             block.Parent = block.NextSibling = null;
-            
-            // update the underlying markdown
-            var startRemoval = block.SourcePosition;
-            var stopRemoval = block.SourcePosition + block.SourceLength;
-            ReplaceMarkdown(root, startRemoval, stopRemoval, "");
 
-            // remove any link definitions defined
-            VisitSelfAndChildren(
-                block,
-                b =>
-                {
-                    if(b.Tag == BlockTag.ReferenceDefinition)
-                    {
-                        if(b.DefinesReferenceLabels != null)
-                        {
-                            foreach(var label in b.DefinesReferenceLabels)
-                            {
-                                root.ReferenceMap.Remove(label);
-                            }
-                        }
-                    }
-                },
-                _ => { }
-            );*/
+            var amountRemoved = stopRemoval - startRemoval;
+
+            AdjustOffsetsAndSizes(firstSibling, null, parent, null, -amountRemoved);
+
+            // update the underlying markdown
+            root.OriginalMarkdown = root.OriginalMarkdown.Substring(0, startRemoval) + root.OriginalMarkdown.Substring(stopRemoval);
         }
 
         static void Remove(Block root, Inline inline)
         {
-            throw new NotImplementedException();
+            var parent = inline.ParentBlock;
+            var startRemoval = inline.SourcePosition;
+            var stopRemoval = inline.SourcePosition + inline.SourceLength;
 
-            /*var parent = inline.ParentBlock;
-            
+            var parentBlock = inline.ParentBlock;
+            var parentInline = inline.ParentInline;
+            var nextSibling = inline.NextSibling;
+
             Inline prevSibling = null;
             var curSibling = parent.InlineContent;
             while (curSibling != inline)
@@ -427,10 +416,12 @@ namespace CommonMark.Transformers
             inline.ParentBlock = null;
             inline.NextSibling = null;
 
+            var amountRemoved = stopRemoval - startRemoval;
+
+            AdjustOffsetsAndSizes(null, nextSibling, parentBlock, parentInline, -amountRemoved);
+
             // update the underlying markdown
-            var startRemoval = inline.SourcePosition;
-            var stopRemoval = inline.SourcePosition + inline.SourceLength;
-            ReplaceMarkdown(root, startRemoval, stopRemoval, "");*/
+            root.OriginalMarkdown = root.OriginalMarkdown.Substring(0, startRemoval) + root.OriginalMarkdown.Substring(stopRemoval);
         }
 
         static void Replace(Block root, Block old, Block with)
