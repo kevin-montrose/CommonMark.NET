@@ -162,6 +162,8 @@ namespace CommonMark.Parser
                         while (trailingWhiteSpace < text.Length && char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1])) trailingWhiteSpace++;
 
                         var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset + leadingWhiteSpace);
+                        cell.Parent = row;
+                        cell.Top = row.Top;
                         cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
                         cell.StringContent = new StringContent();
                         cell.StringContent.Append(text, leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
@@ -216,6 +218,8 @@ namespace CommonMark.Parser
                     if (text.Length - leadingWhiteSpace - trailingWhiteSpace > 0)
                     {
                         var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset + leadingWhiteSpace);
+                        cell.Parent = row;
+                        cell.Top = row.Top;
                         cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
                         cell.StringContent = new StringContent();
                         cell.StringContent.Append(text, leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
@@ -257,6 +261,8 @@ namespace CommonMark.Parser
                 {
                     var rowStartsInDocument = table.SourcePosition + offset;
                     var row = new Block(BlockTag.TableRow, rowStartsInDocument);
+                    row.Parent = table;
+                    row.Top = table.Top;
                     row.SourceLastPosition = rowStartsInDocument + lineLength;
 
                     row.StringContent = new StringContent();
@@ -407,7 +413,6 @@ namespace CommonMark.Parser
 
             // get the text of the table separate
             var tableBlockString = b.StringContent.TakeFromStart(takingCharsForTable, trim: true);
-            var newBlock = new Block(BlockTag.Paragraph, b.SourcePosition + tableBlockString.Length);
 
             // create the trailing paragraph, and set it's text and source positions
             var newParagraph = b.Clone();
