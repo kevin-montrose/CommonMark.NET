@@ -226,9 +226,13 @@ namespace CommonMark.Formatters
             writer.WriteConstant("<thead>");
             writer.WriteConstant("<tr>");
 
+            var numHeadings = 0;
+
             var curHeaderCell = header.FirstChild;
             while(curHeaderCell != null)
             {
+                numHeadings++;
+
                 writer.WriteConstant("<th>");
                 InlinesToHtml(writer, curHeaderCell.InlineContent, settings, stack);
                 writer.WriteConstant("</th>");
@@ -245,14 +249,26 @@ namespace CommonMark.Formatters
             {
                 writer.WriteConstant("<tr>");
                 var curRowCell = curRow.FirstChild;
-                while(curRowCell != null)
+
+                var numCells = 0;
+
+                while(curRowCell != null && numCells < numHeadings)
                 {
+                    numCells++;
+
                     writer.WriteConstant("<td>");
                     InlinesToHtml(writer, curRowCell.InlineContent, settings, stack);
                     writer.WriteConstant("</td>");
 
                     curRowCell = curRowCell.NextSibling;
                 }
+
+                while(numCells < numHeadings)
+                {
+                    numCells++;
+                    writer.WriteConstant("<td></td>");
+                }
+
                 writer.WriteConstant("</tr>");
 
                 curRow = curRow.NextSibling;

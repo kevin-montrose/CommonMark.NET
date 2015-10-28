@@ -277,5 +277,25 @@ Hello world
             Assert.AreEqual("cell #22", markdown.Substring(secondRowCell2.SourcePosition, secondRowCell2.SourceLength));
             Assert.IsNull(secondRowCell2.NextSibling);
         }
+
+        [TestMethod]
+        public void TableCellMismatch()
+        {
+            var markdown =
+@"| First Header  | Second Header |
+| ------------- | ------------- |
+| 11  |
+| 21  | 22  | 23
+";
+
+            var ast = CommonMarkConverter.Parse(markdown, ReadSettings);
+            string html;
+            using (var str = new StringWriter())
+            {
+                CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                html = str.ToString();
+            }
+            Assert.AreEqual("<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>11</td><td></td></tr><tr><td>21</td><td>22</td></tr></tbody></table>\r\n", html);
+        }
     }
 }

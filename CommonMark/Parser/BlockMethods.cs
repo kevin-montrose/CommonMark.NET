@@ -323,8 +323,23 @@ namespace CommonMark.Parser
             // it's a table!
             for (var i = 2; i < lines.Length; i++)
             {
-                var parts = ParseTableLine(lines[i], sb);
-                if (parts.Count < 2) break;
+                var hasPipe = false;
+                for(var j = 0; j < lines[i].Length; j++)
+                {
+                    var c = lines[i][j];
+                    if(c == '\\')
+                    {
+                        j++;
+                        continue;
+                    }
+
+                    if(c == '|')
+                    {
+                        hasPipe = true;
+                        break;
+                    }
+                }
+                if (!hasPipe) break;
 
                 lastTableLine = i;
             }
