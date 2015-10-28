@@ -324,17 +324,7 @@ namespace CommonMark.Transformers
 
             foreach(var block in blocksNeedingSizeAdjustment)
             {
-                VisitSelfAndChildren(
-                    block,
-                    b =>
-                    {
-                        b.AdjustSize(adjustmentSize);
-                    },
-                    i =>
-                    {
-                        //i.AdjustSize(adjustmentSize);
-                    }
-                );
+                block.AdjustSize(adjustmentSize);
             }
 
             foreach (var inline in inlinesNeedingOffsetAdjustment)
@@ -350,13 +340,7 @@ namespace CommonMark.Transformers
 
             foreach (var inline in inlinesNeedingSizeAdjustment)
             {
-                VisitSelfAndChildren(
-                    inline,
-                    i =>
-                    {
-                        i.AdjustSize(adjustmentSize);
-                    }
-                );
+                inline.AdjustSize(adjustmentSize);
             }
         }
 

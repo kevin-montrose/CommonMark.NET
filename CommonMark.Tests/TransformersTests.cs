@@ -215,7 +215,7 @@ is it?
 
 [bar][1]
 
-[1]: http://example.com/
+  [1]: http://example.com/
 ",
                     withReplacement
                 );
