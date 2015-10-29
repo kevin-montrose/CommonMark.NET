@@ -416,6 +416,23 @@ Hello world
                 }
                 Assert.AreEqual("<blockquote>\r\n<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content+Cell</td><td>Content-Cell</td></tr><tr><td>Content*Cell</td><td>Content/Cell</td></tr></tbody></table></blockquote>\r\n\r\n", html);
             }
+
+            {
+                var markdown = @"
+> First Header  | Second Header
+>------------- | -------------
+> Content+Cell  | Content-Cell
+>  Content*Cell  | Content/Cell";
+
+                var ast = CommonMarkConverter.Parse(markdown, ReadSettings);
+                string html;
+                using (var str = new StringWriter())
+                {
+                    CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                    html = str.ToString();
+                }
+                Assert.AreEqual("<blockquote>\r\n<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content+Cell</td><td>Content-Cell</td></tr><tr><td>Content*Cell</td><td>Content/Cell</td></tr></tbody></table></blockquote>\r\n\r\n", html);
+            }
         }
     }
 }
