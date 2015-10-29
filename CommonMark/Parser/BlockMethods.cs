@@ -102,8 +102,10 @@ namespace CommonMark.Parser
             }
         }
 
-        static List<string> ParseTableLine(string rawLine, StringBuilder sb)
+        static List<string> ParseTableLine(StringPart strPart, StringBuilder sb)
         {
+            var rawLine = strPart.Source.Substring(strPart.StartIndex, strPart.Length);
+
             var ret = new List<string>();
 
             string line;
@@ -351,7 +353,7 @@ namespace CommonMark.Parser
 
             var rowStarts = new List<int>();
             var rowEnds = new List<int>();
-            var rowCleanStr = new List<string>();
+            var rowCleanStr = new List<StringPart>();
 
             // parse the lines
             {
@@ -361,22 +363,20 @@ namespace CommonMark.Parser
                     var rawLine = lines[i];
                     var strLine = strContentLines[i];
 
-                    var cleanLine = strLine.Source.Substring(strLine.StartIndex, strLine.Length);
-
-                    var parts = ParseTableLine(cleanLine, sb);
+                    var parts = ParseTableLine(strLine, sb);
 
                     var lineLength = rawLine.Length;
                     var hasLineBreak = offset + lineLength < asStr.Length && asStr[offset + lineLength] == '\n';
                     if (hasLineBreak) lineLength++;
 
-                    if(i != 1 && !string.IsNullOrWhiteSpace(cleanLine))
+                    if(i != 1 && parts.Count > 0)
                     {
                         var startsInDoc = table.SourcePosition + offset;
                         var stopsInDoc = startsInDoc + lineLength;
 
                         rowStarts.Add(startsInDoc);
                         rowEnds.Add(stopsInDoc);
-                        rowCleanStr.Add(cleanLine);
+                        rowCleanStr.Add(strLine);
                     }
 
                     offset += lineLength;
@@ -399,7 +399,7 @@ namespace CommonMark.Parser
                     row.SourceLastPosition = stop;
                     row.StringContent = new StringContent();
                     row.StringContent.PositionTracker = new PositionTracker(start);
-                    row.StringContent.Append(txt, 0, txt.Length);
+                    row.StringContent.Append(txt.Source, txt.StartIndex, txt.Length);
 
                     if(prevRow == null)
                     {
@@ -423,15 +423,20 @@ namespace CommonMark.Parser
 
             var asStr = b.EquivalentMarkdown;
             var lines = asStr.Split('\n');
+            var blockStrContent = b.StringContent.RetrieveParts();
+            var strContentLines = new StringPart[blockStrContent.Count];
+            Array.Copy(blockStrContent.Array, blockStrContent.Offset, strContentLines, 0, blockStrContent.Count);
 
-            if (lines.Length < 2) return false;
+            if (strContentLines.Length < 2) return false;
 
             var sb = new StringBuilder();
 
-            var columnsLine = ParseTableLine(lines[0], sb);
+            var columnsStrContent = strContentLines[0];
+            var columnsLine = ParseTableLine(columnsStrContent, sb);
             if (columnsLine.Count == 1) return false;
 
-            var headerLine = ParseTableLine(lines[1], sb);
+            var headerStrcontent = strContentLines[1];
+            var headerLine = ParseTableLine(headerStrcontent, sb);
             if (headerLine.Count == 1) return false;
 
             var headerAlignment = new List<TableHeaderAlignment>();
@@ -489,12 +494,12 @@ namespace CommonMark.Parser
             var lastTableLine = 1;
 
             // it's a table!
-            for (var i = 2; i < lines.Length; i++)
+            for (var i = 2; i < strContentLines.Length; i++)
             {
                 var hasPipe = false;
-                for(var j = 0; j < lines[i].Length; j++)
+                for(var j = 0; j < strContentLines[i].Length; j++)
                 {
-                    var c = lines[i][j];
+                    var c = strContentLines[i].Source[strContentLines[i].StartIndex + j];
                     if(c == '\\')
                     {
                         j++;
