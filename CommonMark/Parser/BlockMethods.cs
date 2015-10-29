@@ -350,13 +350,15 @@ namespace CommonMark.Parser
             var tableStrContent = table.StringContent.RetrieveParts();
             var strContentLines = new StringPart[tableStrContent.Count];
             Array.Copy(tableStrContent.Array, tableStrContent.Offset, strContentLines, 0, tableStrContent.Count);
-
+            
             var rowStarts = new List<int>();
             var rowEnds = new List<int>();
             var rowCleanStr = new List<StringPart>();
 
             // parse the lines
             {
+                var offsetAtTableStart = table.StringContent.PositionTracker.GetOffsetAt(table.SourcePosition);
+
                 var offset = 0;
                 for (var i = 0; i < strContentLines.Length; i++)
                 {
@@ -373,6 +375,12 @@ namespace CommonMark.Parser
                     {
                         var startsInDoc = table.SourcePosition + offset;
                         var stopsInDoc = startsInDoc + lineLength;
+
+                        // first line is already stepped up to the exact start, subsequent lines need to be adjusted
+                        if(i > 0)
+                        {
+                            startsInDoc += offsetAtTableStart;
+                        }
 
                         rowStarts.Add(startsInDoc);
                         rowEnds.Add(stopsInDoc);

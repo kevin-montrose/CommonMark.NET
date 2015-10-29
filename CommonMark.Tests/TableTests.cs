@@ -396,7 +396,7 @@ Hello world
                 CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
                 html = str.ToString();
             }
-            Assert.AreEqual("<blockquote>\r\n<p>Content before</p>\r\n<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content+Cell</td><td>Content+Cell</td></tr><tr><td>Content*Cell</td><td>Content*Cell</td></tr></tbody></table>\r\n<p>More content in the blockquote.</p>\r\n</blockquote>\r\n\r\n", html);
+            Assert.AreEqual("<blockquote>\r\n<p>Content before</p>\r\n<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content+Cell</td><td>Content-Cell</td></tr><tr><td>Content*Cell</td><td>Content/Cell</td></tr></tbody></table>\r\n<p>More content in the blockquote.</p>\r\n</blockquote>\r\n\r\n", html);
         }
     }
 }

@@ -122,6 +122,22 @@ namespace CommonMark.Parser
 
             return position;
         }
+        
+        internal int GetOffsetAt(int at)
+        {
+            var ret = 0;
+
+            for (var i = 0; i < OffsetCount; i++)
+            {
+                var offset = Offsets[i];
+                if(offset.Position <= at)
+                {
+                    ret += offset.Offset;
+                }
+            }
+
+            return ret;
+        }
 
         private PositionOffset[] Offsets = new PositionOffset[10];
         private int OffsetCount;
