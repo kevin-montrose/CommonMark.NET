@@ -335,7 +335,8 @@ Hello world
         [TestMethod]
         public void TableInBlockQuote()
         {
-            var markdown = @"
+            {
+                var markdown = @"
 > Content before
 >
 > First Header  | Second Header
@@ -345,58 +346,76 @@ Hello world
 >
 > More content in the blockquote.";
 
-            var ast = CommonMarkConverter.Parse(markdown, ReadSettings);
-            var quote = ast.FirstChild;
-            Assert.AreEqual(BlockTag.BlockQuote, quote.Tag);
-            var p1 = quote.FirstChild;
-            Assert.AreEqual(BlockTag.Paragraph, p1.Tag);
-            var table = p1.NextSibling;
-            Assert.AreEqual(BlockTag.Table, table.Tag);
-            var p2 = table.NextSibling;
-            Assert.AreEqual(BlockTag.Paragraph, p2.Tag);
-            Assert.IsNull(p2.NextSibling);
-            Assert.AreEqual(quote.LastChild, p2);
+                var ast = CommonMarkConverter.Parse(markdown, ReadSettings);
+                var quote = ast.FirstChild;
+                Assert.AreEqual(BlockTag.BlockQuote, quote.Tag);
+                var p1 = quote.FirstChild;
+                Assert.AreEqual(BlockTag.Paragraph, p1.Tag);
+                var table = p1.NextSibling;
+                Assert.AreEqual(BlockTag.Table, table.Tag);
+                var p2 = table.NextSibling;
+                Assert.AreEqual(BlockTag.Paragraph, p2.Tag);
+                Assert.IsNull(p2.NextSibling);
+                Assert.AreEqual(quote.LastChild, p2);
 
-            Assert.AreEqual("Content before\n", p1.EquivalentMarkdown);
-            Assert.AreEqual("More content in the blockquote.", p2.EquivalentMarkdown);
+                Assert.AreEqual("Content before\n", p1.EquivalentMarkdown);
+                Assert.AreEqual("More content in the blockquote.", p2.EquivalentMarkdown);
 
-            var row1 = table.FirstChild;
-            Assert.AreEqual("First Header  | Second Header\n", row1.EquivalentMarkdown);
-            var row2 = row1.NextSibling;
-            Assert.AreEqual("Content+Cell  | Content-Cell\n", table.FirstChild.NextSibling.EquivalentMarkdown);
-            var row3 = row2.NextSibling;
-            Assert.AreEqual("Content*Cell  | Content/Cell\r\n", table.FirstChild.NextSibling.NextSibling.EquivalentMarkdown);
-            Assert.IsNull(row3.NextSibling);
-            Assert.AreEqual(table.LastChild, row3);
+                var row1 = table.FirstChild;
+                Assert.AreEqual("First Header  | Second Header\n", row1.EquivalentMarkdown);
+                var row2 = row1.NextSibling;
+                Assert.AreEqual("Content+Cell  | Content-Cell\n", table.FirstChild.NextSibling.EquivalentMarkdown);
+                var row3 = row2.NextSibling;
+                Assert.AreEqual("Content*Cell  | Content/Cell\r\n", table.FirstChild.NextSibling.NextSibling.EquivalentMarkdown);
+                Assert.IsNull(row3.NextSibling);
+                Assert.AreEqual(table.LastChild, row3);
 
-            var c11 = row1.FirstChild;
-            Assert.AreEqual("First Header", c11.EquivalentMarkdown);
-            var c12 = c11.NextSibling;
-            Assert.AreEqual("Second Header", c12.EquivalentMarkdown);
-            Assert.IsNull(c12.NextSibling);
-            Assert.AreEqual(row1.LastChild, c12);
+                var c11 = row1.FirstChild;
+                Assert.AreEqual("First Header", c11.EquivalentMarkdown);
+                var c12 = c11.NextSibling;
+                Assert.AreEqual("Second Header", c12.EquivalentMarkdown);
+                Assert.IsNull(c12.NextSibling);
+                Assert.AreEqual(row1.LastChild, c12);
 
-            var c21 = row2.FirstChild;
-            Assert.AreEqual("Content+Cell", c21.EquivalentMarkdown);
-            var c22 = c21.NextSibling;
-            Assert.AreEqual("Content-Cell", c22.EquivalentMarkdown);
-            Assert.IsNull(c22.NextSibling);
-            Assert.AreEqual(row2.LastChild, c22);
+                var c21 = row2.FirstChild;
+                Assert.AreEqual("Content+Cell", c21.EquivalentMarkdown);
+                var c22 = c21.NextSibling;
+                Assert.AreEqual("Content-Cell", c22.EquivalentMarkdown);
+                Assert.IsNull(c22.NextSibling);
+                Assert.AreEqual(row2.LastChild, c22);
 
-            var c31 = row3.FirstChild;
-            Assert.AreEqual("Content*Cell", c31.EquivalentMarkdown);
-            var c32 = c31.NextSibling;
-            Assert.AreEqual("Content/Cell", c32.EquivalentMarkdown);
-            Assert.IsNull(c32.NextSibling);
-            Assert.AreEqual(row3.LastChild, c32);
+                var c31 = row3.FirstChild;
+                Assert.AreEqual("Content*Cell", c31.EquivalentMarkdown);
+                var c32 = c31.NextSibling;
+                Assert.AreEqual("Content/Cell", c32.EquivalentMarkdown);
+                Assert.IsNull(c32.NextSibling);
+                Assert.AreEqual(row3.LastChild, c32);
 
-            string html;
-            using (var str = new StringWriter())
-            {
-                CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
-                html = str.ToString();
+                string html;
+                using (var str = new StringWriter())
+                {
+                    CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                    html = str.ToString();
+                }
+                Assert.AreEqual("<blockquote>\r\n<p>Content before</p>\r\n<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content+Cell</td><td>Content-Cell</td></tr><tr><td>Content*Cell</td><td>Content/Cell</td></tr></tbody></table>\r\n<p>More content in the blockquote.</p>\r\n</blockquote>\r\n\r\n", html);
             }
-            Assert.AreEqual("<blockquote>\r\n<p>Content before</p>\r\n<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content+Cell</td><td>Content-Cell</td></tr><tr><td>Content*Cell</td><td>Content/Cell</td></tr></tbody></table>\r\n<p>More content in the blockquote.</p>\r\n</blockquote>\r\n\r\n", html);
+
+            {
+                var markdown = @"
+>First Header  | Second Header
+>------------- | -------------
+>Content+Cell  | Content-Cell
+>Content*Cell  | Content/Cell";
+
+                var ast = CommonMarkConverter.Parse(markdown, ReadSettings);
+                string html;
+                using (var str = new StringWriter())
+                {
+                    CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                    html = str.ToString();
+                }
+                Assert.AreEqual("<blockquote>\r\n<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content+Cell</td><td>Content-Cell</td></tr><tr><td>Content*Cell</td><td>Content/Cell</td></tr></tbody></table></blockquote>\r\n\r\n", html);
+            }
         }
     }
 }
