@@ -160,13 +160,64 @@ namespace CommonMark.Parser
         {
             var asStr = row.EquivalentMarkdown;
 
-            var offset = 0;
+            var equivalentStarts = new List<int>();
+            var equivalentEnds = new List<int>();
 
-            for(var i = 0; i < asStr.Length; i++)
+            StringPart cleanStr;
+            var rowStringParts = row.StringContent.RetrieveParts();
+            cleanStr = rowStringParts.Array[rowStringParts.Offset];
+
+            var cleanCellText = new List<string>();
+
+            // get the offsets into the real source
             {
-                var c = asStr[i];
+                var offset = 0;
 
-                if (c == '|')
+                for (var i = 0; i < asStr.Length; i++)
+                {
+                    var c = asStr[i];
+                    
+                    if (c == '|')
+                    {
+                        var text = sb.ToString();
+                        sb.Clear();
+
+                        if (text.Length > 0)
+                        {
+                            var leadingWhiteSpace = 0;
+                            while (leadingWhiteSpace < text.Length && char.IsWhiteSpace(text[leadingWhiteSpace])) leadingWhiteSpace++;
+                            var trailingWhiteSpace = 0;
+                            while (trailingWhiteSpace < text.Length && char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1])) trailingWhiteSpace++;
+
+                            var startPos = row.SourcePosition + offset + leadingWhiteSpace;
+                            var endPos = startPos + text.Length - trailingWhiteSpace - leadingWhiteSpace;
+                            equivalentStarts.Add(startPos);
+                            equivalentEnds.Add(endPos);
+                        }
+
+                        offset += text.Length;
+
+                        // skip the |
+                        offset++;
+                        continue;
+                    }
+
+                    if (c == '\\')
+                    {
+                        sb.Append(c);
+                        if (i + 1 < asStr.Length)
+                        {
+                            sb.Append(asStr[i + 1]);
+                        }
+                        i++;
+                    }
+                    else
+                    {
+                        sb.Append(c);
+                    }
+                }
+
+                if (sb.Length > 0)
                 {
                     var text = sb.ToString();
                     sb.Clear();
@@ -178,84 +229,113 @@ namespace CommonMark.Parser
                         var trailingWhiteSpace = 0;
                         while (trailingWhiteSpace < text.Length && char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1])) trailingWhiteSpace++;
 
-                        var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset + leadingWhiteSpace);
-                        cell.Parent = row;
-                        cell.Top = row.Top;
-                        cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
-                        cell.StringContent = new StringContent();
-                        cell.StringContent.PositionTracker = row.StringContent.PositionTracker;
-                        cell.StringContent.Append(text, leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
-
-                        if (row.LastChild == null)
+                        if (text.Length - leadingWhiteSpace - trailingWhiteSpace > 0)
                         {
-                            row.FirstChild = row.LastChild = cell;
+                            var startPos = row.SourcePosition + offset + leadingWhiteSpace;
+                            var endPos = startPos + text.Length - trailingWhiteSpace - leadingWhiteSpace;
+                            equivalentStarts.Add(startPos);
+                            equivalentEnds.Add(endPos);
                         }
-                        else
-                        {
-                            row.LastChild.NextSibling = cell;
-                            row.LastChild = cell;
-                        }
-
-                        cell.IsOpen = false;
                     }
-
-                    offset += text.Length;
-
-                    // skip the |
-                    offset++;
-                    continue;
-                }
-
-                if (c == '\\')
-                {
-                    sb.Append(c);
-                    if(i + 1 < asStr.Length)
-                    {
-                        sb.Append(asStr[i + 1]);
-                    }
-                    i++;
-                }
-                else
-                {
-                    sb.Append(c);
                 }
             }
 
-            if(sb.Length> 0)
+            // get the normalized markdown
             {
-                var text = sb.ToString();
-                sb.Clear();
+                var offset = 0;
 
-                if (text.Length > 0)
+                for (var i = 0; i < cleanStr.Length; i++)
                 {
-                    var leadingWhiteSpace = 0;
-                    while (leadingWhiteSpace < text.Length && char.IsWhiteSpace(text[leadingWhiteSpace])) leadingWhiteSpace++;
-                    var trailingWhiteSpace = 0;
-                    while (trailingWhiteSpace < text.Length && char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1])) trailingWhiteSpace++;
-
-                    if (text.Length - leadingWhiteSpace - trailingWhiteSpace > 0)
+                    var c = cleanStr.Source[i + cleanStr.StartIndex];
+                    
+                    if (c == '|')
                     {
-                        var cell = new Block(BlockTag.TableCell, row.SourcePosition + offset + leadingWhiteSpace);
-                        cell.Parent = row;
-                        cell.Top = row.Top;
-                        cell.SourceLastPosition = cell.SourcePosition + text.Length - trailingWhiteSpace - leadingWhiteSpace;
-                        cell.StringContent = new StringContent();
-                        cell.StringContent.PositionTracker = row.StringContent.PositionTracker;
-                        cell.StringContent.Append(text, leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
+                        var text = sb.ToString();
+                        sb.Clear();
 
-                        if (row.LastChild == null)
+                        if (text.Length > 0)
                         {
-                            row.FirstChild = row.LastChild = cell;
-                        }
-                        else
-                        {
-                            row.LastChild.NextSibling = cell;
-                            row.LastChild = cell;
+                            var leadingWhiteSpace = 0;
+                            while (leadingWhiteSpace < text.Length && char.IsWhiteSpace(text[leadingWhiteSpace])) leadingWhiteSpace++;
+                            var trailingWhiteSpace = 0;
+                            while (trailingWhiteSpace < text.Length && char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1])) trailingWhiteSpace++;
+
+
+                            var cellText = text.Substring(leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
+                            cleanCellText.Add(cellText);
                         }
 
-                        cell.IsOpen = false;
+                        offset += text.Length;
+
+                        // skip the |
+                        offset++;
+                        continue;
+                    }
+
+                    if (c == '\\')
+                    {
+                        sb.Append(c);
+                        if (i + 1 < asStr.Length)
+                        {
+                            sb.Append(asStr[i + 1]);
+                        }
+                        i++;
+                    }
+                    else
+                    {
+                        sb.Append(c);
                     }
                 }
+
+                if (sb.Length > 0)
+                {
+                    var text = sb.ToString();
+                    sb.Clear();
+
+                    if (text.Length > 0)
+                    {
+                        var leadingWhiteSpace = 0;
+                        while (leadingWhiteSpace < text.Length && char.IsWhiteSpace(text[leadingWhiteSpace])) leadingWhiteSpace++;
+                        var trailingWhiteSpace = 0;
+                        while (trailingWhiteSpace < text.Length && char.IsWhiteSpace(text[text.Length - trailingWhiteSpace - 1])) trailingWhiteSpace++;
+
+                        if (text.Length - leadingWhiteSpace - trailingWhiteSpace > 0)
+                        {
+                            var cellText = text.Substring(leadingWhiteSpace, text.Length - leadingWhiteSpace - trailingWhiteSpace);
+                            cleanCellText.Add(cellText);
+                        }
+                    }
+                }
+            }
+
+
+            // make the cells
+            Block prevCell = null;
+
+            for(var i  = 0; i < equivalentStarts.Count; i++)
+            {
+                var startPos = equivalentStarts[i];
+                var endPos = equivalentEnds[i];
+                var cellText = cleanCellText[i];
+
+                var cell = new Block(BlockTag.TableCell, startPos);
+                cell.Parent = row;
+                cell.Top = row.Top;
+                cell.SourceLastPosition = endPos;
+                cell.StringContent = new StringContent();
+                cell.StringContent.PositionTracker = row.StringContent.PositionTracker;
+                cell.StringContent.Append(cellText, 0, cellText.Length);
+
+                if(prevCell != null)
+                {
+                    prevCell.NextSibling = cell;
+                }
+                else
+                {
+                    row.FirstChild = cell;
+                }
+
+                prevCell = cell;
             }
         }
 
