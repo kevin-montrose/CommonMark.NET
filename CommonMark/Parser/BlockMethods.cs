@@ -369,8 +369,9 @@ namespace CommonMark.Parser
                     row.SourceLastPosition = rowStartsInDocument + lineLength;
 
                     var rowStr = new StringPart[] { strContentLines[i] };
-                    var rowStrContent = new StringContent(rowStr, table.StringContent.PositionTracker);
-                    
+                    var rowPositionTracker = new PositionTracker(rowStartsInDocument);
+                    var rowStrContent = new StringContent(rowStr, rowPositionTracker);
+
                     row.StringContent = rowStrContent;
                     
                     if (table.LastChild == null)
@@ -525,10 +526,10 @@ namespace CommonMark.Parser
             Array.Copy(parts.Array, parts.Offset + lastTableLine + 1, belongToParagraph, 0, belongToParagraph.Length);
 
             var tableStringContent = new StringContent(belongToTable, b.StringContent.PositionTracker);
+
             var paragraphPositionTracker = new PositionTracker(b.StringContent.PositionTracker.BlockOffset);
             paragraphPositionTracker.AddBlockOffset(takingCharsForTable);
             var paragraphStringContent = new StringContent(belongToParagraph, paragraphPositionTracker);
-            //var paragraphStringContent = new StringContent(belongToParagraph, b.StringContent.PositionTracker);
 
             // create the trailing paragraph, and set it's text and source positions
             var newParagraph = b.Clone();
