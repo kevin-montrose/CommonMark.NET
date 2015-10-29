@@ -346,51 +346,74 @@ namespace CommonMark.Parser
             var lines = asStr.Split('\n');
 
             var tableStrContent = table.StringContent.RetrieveParts();
-            var strContentLines = new StringPart[lines.Length];
+            var strContentLines = new StringPart[tableStrContent.Count];
             Array.Copy(tableStrContent.Array, tableStrContent.Offset, strContentLines, 0, tableStrContent.Count);
 
-            var offset = 0;
+            var rowStarts = new List<int>();
+            var rowEnds = new List<int>();
+            var rowCleanStr = new List<string>();
 
-            for(var i = 0; i < lines.Length; i++)
+            // parse the lines
             {
-                var line = lines[i];
-                var parts = ParseTableLine(line, sb);
-                
-                var lineLength = line.Length;
-                var hasLineBreak = offset + lineLength < asStr.Length && asStr[offset + lineLength] == '\n';
-                if (hasLineBreak) lineLength++;
-
-                // skip the header row
-                if (i != 1 && !string.IsNullOrWhiteSpace(line))
+                var offset = 0;
+                for (var i = 0; i < strContentLines.Length; i++)
                 {
-                    var rowStartsInDocument = table.SourcePosition + offset;
-                    var row = new Block(BlockTag.TableRow, rowStartsInDocument);
+                    var rawLine = lines[i];
+                    var strLine = strContentLines[i];
+
+                    var cleanLine = strLine.Source.Substring(strLine.StartIndex, strLine.Length);
+
+                    var parts = ParseTableLine(cleanLine, sb);
+
+                    var lineLength = rawLine.Length;
+                    var hasLineBreak = offset + lineLength < asStr.Length && asStr[offset + lineLength] == '\n';
+                    if (hasLineBreak) lineLength++;
+
+                    if(i != 1 && !string.IsNullOrWhiteSpace(cleanLine))
+                    {
+                        var startsInDoc = table.SourcePosition + offset;
+                        var stopsInDoc = startsInDoc + lineLength;
+
+                        rowStarts.Add(startsInDoc);
+                        rowEnds.Add(stopsInDoc);
+                        rowCleanStr.Add(cleanLine);
+                    }
+
+                    offset += lineLength;
+                }
+            }
+
+            // create the rows
+            {
+                Block prevRow = null;
+
+                for (var i = 0; i < rowStarts.Count; i++)
+                {
+                    var start = rowStarts[i];
+                    var stop = rowEnds[i];
+                    var txt = rowCleanStr[i];
+
+                    var row = new Block(BlockTag.TableRow, start);
                     row.Parent = table;
                     row.Top = table.Top;
-                    row.SourceLastPosition = rowStartsInDocument + lineLength;
+                    row.SourceLastPosition = stop;
+                    row.StringContent = new StringContent();
+                    row.StringContent.PositionTracker = new PositionTracker(start);
+                    row.StringContent.Append(txt, 0, txt.Length);
 
-                    var rowStr = new StringPart[] { strContentLines[i] };
-                    var rowPositionTracker = new PositionTracker(rowStartsInDocument);
-                    var rowStrContent = new StringContent(rowStr, rowPositionTracker);
-
-                    row.StringContent = rowStrContent;
-                    
-                    if (table.LastChild == null)
+                    if(prevRow == null)
                     {
-                        table.FirstChild = row;
-                        table.LastChild = row;
+                        table.FirstChild = table.LastChild = row;
                     }
                     else
                     {
-                        table.LastChild.NextSibling = row;
-                        table.LastChild = row;
+                        prevRow.NextSibling = table.LastChild = row;
                     }
 
                     MakeTableCells(row, sb);
-                    row.IsOpen = false;
-                }
 
-                offset += lineLength;
+                    prevRow = row;
+                }
             }
         }
 
