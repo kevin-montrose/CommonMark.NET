@@ -323,7 +323,8 @@ namespace CommonMark.Parser
                 cell.Top = row.Top;
                 cell.SourceLastPosition = endPos;
                 cell.StringContent = new StringContent();
-                cell.StringContent.PositionTracker = row.StringContent.PositionTracker;
+                var cellPositionTracker = new PositionTracker(startPos);
+                cell.StringContent.PositionTracker = cellPositionTracker;
                 cell.StringContent.Append(cellText, 0, cellText.Length);
 
                 if(prevCell != null)

@@ -312,8 +312,7 @@ e | f | g | h";
 
             var transformedMarkdown = ast.OriginalMarkdown;
 
-            // this is all fucked atm
-            Assert.AreEqual("", transformedMarkdown);
+            Assert.AreEqual("\r\nLet's play around with something trickier.\r\n\r\n## Table begins\r\n\r\n| 1,1 | 1,2 | 1,3 | 1,4\r\n  --------- |   ---     |   ----    | ---:\r\n2,1 | 2,2 | 2,3 | 2,4\r\n3,1 | 3,2 | 3,3 | 3,4", transformedMarkdown);
 
             string html;
             using (var str = new StringWriter())
