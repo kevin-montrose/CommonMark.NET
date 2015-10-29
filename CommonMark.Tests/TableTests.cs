@@ -331,5 +331,29 @@ Hello world
             }
             Assert.AreEqual("<table><thead><tr><th>H1</th><th align=\"left\">H2</th><th align=\"right\">H3</th><th align=\"center\">H4</th></tr></thead><tbody><tr><td>1</td><td align=\"left\">2</td><td align=\"right\">3</td><td align=\"center\">4</td></tr></tbody></table>\r\n", html);
         }
+
+        [TestMethod]
+        public void TableInBlockQuote()
+        {
+            var markdown = @"
+> First Header  | Second Header
+> ------------- | -------------
+> Content Cell  | Content Cell
+> Content Cell  | Content Cell";
+
+            var ast = CommonMarkConverter.Parse(markdown, ReadSettings);
+            var quote = ast.FirstChild;
+            Assert.AreEqual(BlockTag.BlockQuote, quote.Tag);
+            var table = quote.FirstChild;
+            Assert.AreEqual(BlockTag.Table, quote.Tag);
+
+            /*string html;
+            using (var str = new StringWriter())
+            {
+                CommonMarkConverter.ProcessStage3(ast, str);
+                html = str.ToString();
+            }
+            Assert.AreEqual("", html);*/
+        }
     }
 }
