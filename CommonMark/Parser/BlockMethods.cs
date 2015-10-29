@@ -331,11 +331,11 @@ namespace CommonMark.Parser
 
                 if(prevCell != null)
                 {
-                    prevCell.NextSibling = cell;
+                    prevCell.NextSibling = row.LastChild = cell;
                 }
                 else
                 {
-                    row.FirstChild = cell;
+                    row.FirstChild = row.LastChild = cell;
                 }
 
                 prevCell = cell;
