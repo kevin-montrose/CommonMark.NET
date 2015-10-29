@@ -15,6 +15,8 @@ namespace CommonMark.Parser
 
         private int _blockOffset;
 
+        internal int BlockOffset { get { return _blockOffset; } }
+
         public void AddBlockOffset(int offset)
         {
             this._blockOffset += offset;

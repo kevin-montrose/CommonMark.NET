@@ -525,7 +525,10 @@ namespace CommonMark.Parser
             Array.Copy(parts.Array, parts.Offset + lastTableLine + 1, belongToParagraph, 0, belongToParagraph.Length);
 
             var tableStringContent = new StringContent(belongToTable, b.StringContent.PositionTracker);
-            var paragraphStringContent = new StringContent(belongToParagraph, b.StringContent.PositionTracker);
+            var paragraphPositionTracker = new PositionTracker(b.StringContent.PositionTracker.BlockOffset);
+            paragraphPositionTracker.AddBlockOffset(takingCharsForTable);
+            var paragraphStringContent = new StringContent(belongToParagraph, paragraphPositionTracker);
+            //var paragraphStringContent = new StringContent(belongToParagraph, b.StringContent.PositionTracker);
 
             // create the trailing paragraph, and set it's text and source positions
             var newParagraph = b.Clone();
