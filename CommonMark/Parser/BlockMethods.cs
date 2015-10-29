@@ -264,6 +264,10 @@ namespace CommonMark.Parser
             var asStr = table.EquivalentMarkdown;
             var lines = asStr.Split('\n');
 
+            var tableStrContent = table.StringContent.RetrieveParts();
+            var strContentLines = new StringPart[lines.Length];
+            Array.Copy(tableStrContent.Array, tableStrContent.Offset, strContentLines, 0, tableStrContent.Count);
+
             var offset = 0;
 
             for(var i = 0; i < lines.Length; i++)
@@ -284,10 +288,11 @@ namespace CommonMark.Parser
                     row.Top = table.Top;
                     row.SourceLastPosition = rowStartsInDocument + lineLength;
 
-                    row.StringContent = new StringContent();
-                    row.StringContent.PositionTracker = table.StringContent.PositionTracker;
-                    row.StringContent.Append(asStr,  offset, row.SourceLength);
-
+                    var rowStr = new StringPart[] { strContentLines[i] };
+                    var rowStrContent = new StringContent(rowStr, table.StringContent.PositionTracker);
+                    
+                    row.StringContent = rowStrContent;
+                    
                     if (table.LastChild == null)
                     {
                         table.FirstChild = row;
