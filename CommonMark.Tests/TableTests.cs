@@ -27,7 +27,7 @@ namespace CommonMark.Tests
         {
             var markdown = "First Header | Second Header\n------------- | -------------\nContent Cell | Content Cell\nContent Cell | Content Cell\n";
 
-            var ast = 
+            var ast =
                 CommonMarkConverter.Parse(
                     markdown,
                     ReadSettings
@@ -233,7 +233,7 @@ Hello world
         [TestMethod]
         public void TableWithExtraPipes()
         {
-            var markdown ="| First Header  | Second Header |\n| ------------- | ------------- |\n| cell #11  | cell #12  |\n| cell #21  | cell #22  |\n";
+            var markdown = "| First Header  | Second Header |\n| ------------- | ------------- |\n| cell #11  | cell #12  |\n| cell #21  | cell #22  |\n";
 
             var ast =
                 CommonMarkConverter.Parse(
@@ -432,6 +432,90 @@ Hello world
                     html = str.ToString();
                 }
                 Assert.AreEqual("<blockquote>\r\n<table><thead><tr><th>First Header</th><th>Second Header</th></tr></thead><tbody><tr><td>Content+Cell</td><td>Content-Cell</td></tr><tr><td>Content*Cell</td><td>Content/Cell</td></tr></tbody></table></blockquote>\r\n\r\n", html);
+            }
+        }
+
+        [TestMethod]
+        public void SingleColumnTables()
+        {
+            // things that _should_ become tables
+            {
+                var markdown = new[]
+                {
+@"
+| Column Header |
+| ------------- |
+| One           |",
+@"
+| Column Header 
+| ------------- |
+| One           |",
+@"
+  Column Header |
+| ------------- |
+| One           |",
+@"
+| Column Header |
+  ------------- |
+| One           |",
+@"
+| Column Header |
+| -------------
+| One           |",
+ @"
+| Column Header |
+| ------------- |
+  One           |",
+ @"
+| Column Header |
+| ------------- |
+| One           "
+                };
+
+                foreach (var md in markdown)
+                {
+                    var ast = CommonMarkConverter.Parse(md, ReadSettings);
+                    string html;
+                    using (var str = new StringWriter())
+                    {
+                        CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                        html = str.ToString();
+                    }
+                    Assert.AreEqual("<table><thead><tr><th>Column Header</th></tr></thead><tbody><tr><td>One</td></tr></tbody></table>\r\n", html);
+                }
+            }
+
+            // things that shouldn't become tables
+            {
+                {
+                    var markdown =
+@"
+  Nope
+| ---- |";
+                    var ast = CommonMarkConverter.Parse(markdown, ReadSettings);
+                    string html;
+                    using (var str = new StringWriter())
+                    {
+                        CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                        html = str.ToString();
+                    }
+                    Assert.AreEqual("<p>Nope\r\n| ---- |</p>\r\n\r\n", html);
+                }
+
+                {
+                    var markdown =
+@"
+| Nope |
+  ---- ";
+                    var ast = CommonMarkConverter.Parse(markdown, ReadSettings);
+                    string html;
+                    using (var str = new StringWriter())
+                    {
+                        CommonMarkConverter.ProcessStage3(ast, str, WriteSettings);
+                        html = str.ToString();
+                    }
+                    Assert.AreEqual("<h2>| Nope |</h2>\r\n\r\n", html);
+                }
             }
         }
     }
