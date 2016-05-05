@@ -358,13 +358,13 @@ Hello world
                 Assert.IsNull(p2.NextSibling);
                 Assert.AreEqual(quote.LastChild, p2);
 
-                Assert.AreEqual("Content before\n", p1.EquivalentMarkdown);
+                Assert.AreEqual("Content before\r\n", p1.EquivalentMarkdown);
                 Assert.AreEqual("More content in the blockquote.", p2.EquivalentMarkdown);
 
                 var row1 = table.FirstChild;
-                Assert.AreEqual("First Header  | Second Header\n", row1.EquivalentMarkdown);
+                Assert.AreEqual("First Header  | Second Header\r\n", row1.EquivalentMarkdown);
                 var row2 = row1.NextSibling;
-                Assert.AreEqual("Content+Cell  | Content-Cell\n", table.FirstChild.NextSibling.EquivalentMarkdown);
+                Assert.AreEqual("Content+Cell  | Content-Cell\r\n", table.FirstChild.NextSibling.EquivalentMarkdown);
                 var row3 = row2.NextSibling;
                 Assert.AreEqual("Content*Cell  | Content/Cell\r\n", table.FirstChild.NextSibling.NextSibling.EquivalentMarkdown);
                 Assert.IsNull(row3.NextSibling);
